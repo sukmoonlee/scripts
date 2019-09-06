@@ -14,7 +14,9 @@
 ## 사용법
  * 아래와 같이 cert_report.sh 를 root 권한으로 실행
 <pre><code>
-[smlee@instance-1:/home/smlee/report/cert] $ sudo ./cert_report.sh
+$ git clone https://github.com/sukmoonlee/scripts.git
+$ cd scripts/cert/
+$ sudo ./cert_report.sh
  Certification Report (instance-1, 20190307, 4.2.46(2)-release)
 
 cert_socket_chk.sh                                         [  OK  ]
