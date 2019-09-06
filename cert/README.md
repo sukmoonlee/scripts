@@ -53,3 +53,20 @@ cert_file_chk.sh                                           [  OK  ]
 |        |              | /home/smlee/go/src/golang.org/x/net/http2/h2demo/server.crt | Nov 27 20:50:27 2015 (Bradfitzinc/localhost)                    |
 +--------+--------------+-------------------------------------------------------------+-----------------------------------------------------------------+
 </code></pre>
+
+## 주의사항
+* 스크립트 실행 전/후로 서비스 포트(listen port)에 대한 변화 여부를 확인 필요
+<pre><code>
+$ sudo netstat -nltp
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+tcp        0      0 0.0.0.0:3690            0.0.0.0:*               LISTEN      2859/svnserve
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      2997/sshd
+tcp        0      0 127.0.0.1:25            0.0.0.0:*               LISTEN      3127/master
+tcp6       0      0 :::80                   :::*                    LISTEN      9496/httpd
+tcp6       0      0 :::22                   :::*                    LISTEN      2997/sshd
+tcp6       0      0 ::1:25                  :::*                    LISTEN      3127/master
+tcp6       0      0 :::443                  :::*                    LISTEN      9496/httpd
+$ sudo netstat -nltp |wc
+      9      64     851
+</code></pre>
