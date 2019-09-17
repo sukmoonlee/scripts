@@ -17,7 +17,7 @@ $ git clone https://github.com/sukmoonlee/scripts.git
 $ cd scripts/cert/
 $ ./cert_check.sh
 Usage: ./cert_check.sh -h {Hostname/IP} -p {Port}
-$ ./cert_report.sh -h www.naver.com -p 443
+$ ./cert_check.sh -h www.naver.com -p 443
 Certification Check Script (instance-1, 20190917, 4.2.46(2)-release)
 
 Check URL - www.naver.com:443
