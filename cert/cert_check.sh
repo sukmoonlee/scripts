@@ -133,7 +133,7 @@ GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1"
 GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1_1"
 GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1_2"
 GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "ssl3"
-GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "dtls1"
+#GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "dtls1"
 
 line=$(StringLine "" "10")
 line=$line$(StringLine "" "32")
