@@ -3,7 +3,7 @@
 ## Program Library Report Script
 ## 2019.02 created by CoreSolution (smlee@sk.com)
 ################################################################################
-SCRIPT_VERSION="20190617"
+SCRIPT_VERSION="20191010"
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
 
@@ -58,15 +58,25 @@ function StringCat
 {
 	local name="$1"
 	local len="$2"
+	local align="$3"
 
 	local len_name=${#name}
 	local cnt_space=$((len-len_name))
 	local RST="| $name"
 
+	if [ "$align" == "right" ] ; then
+		RST="|"
+	fi
+
 	for ((i=0; i<cnt_space+1; i++))
 	do
 		RST="$RST "
 	done
+
+	if [ "$align" == "right" ] ; then
+		RST="$RST$name "
+	fi
+
 	echo "$RST";
 }
 function StringLine
@@ -85,24 +95,25 @@ function GetFileDate
 {
 	local file="$1"
 	if [ ! -f "$file" ] ; then echo "-"; fi
-	# shellcheck disable=SC2012
-	local date=$($PG_ls --full-time "$file" |awk '{print $6,substr($7,0,8)}')
-	echo "$date"
+	local fdate
+	fdate=$($PG_ls --full-time "$file" |awk '{print $6,substr($7,0,8)}')
+	echo "$fdate"
 }
 function GetFileSize
 {
 	local file="$1"
 	if [ ! -f "$file" ] ; then echo "-"; fi
-	# shellcheck disable=SC2012
-	local size=$($PG_ls --full-time "$file" |awk '{print $5}')
-	echo "$size"
+	local fsize
+	fsize=$($PG_ls --full-time "$file" |awk '{print $5}')
+	echo "$fsize"
 }
 function GetFileMd5
 {
 	local file="$1"
 	if [ ! -f "$file" ] ; then echo "-"; fi
-	local md5=$($PG_md5sum "$file" |awk '{print $1}')
-	echo "$md5"
+	local fmd5
+	fmd5=$($PG_md5sum "$file" |awk '{print $1}')
+	echo "$fmd5"
 }
 ################################################################################
 set -e
@@ -198,7 +209,7 @@ FN_DATE=$(GetFileDate "$FN_LIB")
 FN_MD5=$(GetFileMd5 "$FN_LIB")
 
 line=$(StringCat "$FN_LIB (*)" "$LEN_FILE")
-line=$line$(StringCat "$FN_SIZE" "$LEN_SIZE")
+line=$line$(StringCat "$FN_SIZE" "$LEN_SIZE" "right")
 line=$line$(StringCat "$FN_DATE" "$LEN_DATE")
 line=$line$(StringCat "$FN_MD5" "$LEN_MD5")
 line=$line$(StringCat "$FN_LINK" "$LEN_LINK")
@@ -216,7 +227,7 @@ do
 			FN_LINK="-"
 
 			line=$(StringCat "$FN_LIB" "$LEN_FILE")
-			line=$line$(StringCat "$FN_SIZE" "$LEN_SIZE")
+			line=$line$(StringCat "$FN_SIZE" "$LEN_SIZE" "right")
 			line=$line$(StringCat "$FN_DATE" "$LEN_DATE")
 			line=$line$(StringCat "$FN_MD5" "$LEN_MD5")
 			line=$line$(StringCat "$FN_LINK" "$LEN_LINK")
@@ -245,7 +256,7 @@ do
 	FN_MD5=$(GetFileMd5 "$FN_LIB")
 
 	line=$(StringCat "$FN_LIB" "$LEN_FILE")
-	line=$line$(StringCat "$FN_SIZE" "$LEN_SIZE")
+	line=$line$(StringCat "$FN_SIZE" "$LEN_SIZE" "right")
 	line=$line$(StringCat "$FN_DATE" "$LEN_DATE")
 	line=$line$(StringCat "$FN_MD5" "$LEN_MD5")
 	line=$line$(StringCat "$FN_LINK" "$LEN_LINK")
