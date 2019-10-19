@@ -111,6 +111,7 @@ while (my $line=<FILE>) {
 close(FILE);
 ################################################################################
 my $line;
+$max_len{"Date"} = length("Expire Date (Organization/CommonName)");
 $line = &StringLine("Port");
 #$line .= &StringLine("PID");
 $line .= &StringLine("Program");
