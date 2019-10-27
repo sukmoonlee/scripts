@@ -3,7 +3,7 @@
 # Certfication Check Script
 # 2019.09.17 created by CoreSolution (smlee@sk.com)
 ################################################################################
-SCRIPT_VERSION="20190917"
+SCRIPT_VERSION="20191027"
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
 
@@ -129,11 +129,29 @@ line=$line$(StringLine "" "32")
 line=$line$(StringLine "" "10")
 echo "    $line+";
 
+just=$($PG_OPENSSL s_client -help 2>&1 >/dev/null |grep -i 'just use'|awk '{print $1}')
 GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1"
 GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1_1"
 GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1_2"
+if [[ $just == *"-tls1_3"* ]] ; then
+	GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1_3"
+fi
 GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "ssl3"
-#GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "dtls1"
+if [[ $just == *"-ssl2"* ]] ; then
+	GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "ssl2"
+fi
+if [[ $just == *"-dtls1"* ]] ; then
+	GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "dtls1"
+fi
+if [[ $just == *"-dtls1_2"* ]] ; then
+	GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "dtls1_2"
+fi
+
+#just=$($PG_OPENSSL s_client -help 2>&1 >/dev/null |grep -i 'just use'|awk '{print $1}')
+#echo "$just" | while IFS=' ' read ll
+#do
+#	GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "$ll"
+#done 
 
 line=$(StringLine "" "10")
 line=$line$(StringLine "" "32")
