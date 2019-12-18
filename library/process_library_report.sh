@@ -3,7 +3,7 @@
 ## Process Library Report Script
 ## 2019.02 created by CoreSolution (smlee@sk.com)
 ################################################################################
-SCRIPT_VERSION="20191010"
+SCRIPT_VERSION="20191211"
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
 
@@ -97,32 +97,41 @@ function StringLine
 function GetFileDate
 {
 	local file="$1"
-	if [ ! -f "$file" ] ; then echo "-"; fi
-	local fdate
-	fdate=$($PG_ls --full-time "$file" |awk '{print $6,substr($7,0,8)}')
-	echo "$fdate"
+	if [ ! -f "$file" ] ; then
+		echo "-";
+	else
+		local fdate
+		fdate=$($PG_ls --full-time "$file" |awk '{print $6,substr($7,0,8)}')
+		echo "$fdate"
+	fi
 }
 function GetFileSize
 {
 	local file="$1"
-	if [ ! -f "$file" ] ; then echo "-"; fi
-	local fsize
-	fsize=$($PG_ls --full-time "$file" |awk '{print $5}')
-	echo "$fsize"
+	if [ ! -f "$file" ] ; then
+		echo "-";
+	else
+		local fsize
+		fsize=$($PG_ls --full-time "$file" |awk '{print $5}')
+		echo "$fsize"
+	fi
 }
 function GetFileMd5
 {
 	local file="$1"
-	if [ ! -f "$file" ] ; then echo "-"; fi
-	local fmd5
-	fmd5=$($PG_md5sum "$file" |awk '{print $1}')
-	echo "$fmd5"
+	if [ ! -f "$file" ] ; then
+		echo "-";
+	else
+		local fmd5
+		fmd5=$($PG_md5sum "$file" |awk '{print $1}')
+		echo "$fmd5"
+	fi
 }
 function GetFileCheck
 {
 	local file="$1"
 	local ftype
-	ftype=$($PG_file "$file" |grep -c "ELF")
+	ftype=$($PG_file "$file" |egrep -c "ELF|Zip archive")
 	echo "$ftype"
 }
 ################################################################################
@@ -151,8 +160,8 @@ done < <($PG_lsof -np "$PROGRAM_PID" |grep ' mem ' |grep ' REG' |awk '{if (NF==9
 
 while IFS=" " read -r FN_LIB
 do
-	FN_TYPE=$(GetFileCheck "$FN_LIB")
-	if [ "$FN_TYPE" == "0" ] ; then continue; fi
+	#FN_TYPE=$(GetFileCheck "$FN_LIB")
+	#if [ "$FN_TYPE" == "0" ] ; then continue; fi
 
 	FN_SIZE=$(GetFileSize "$FN_LIB")
 	FN_DATE=$(GetFileDate "$FN_LIB")
@@ -219,8 +228,8 @@ done < <($PG_lsof -np "$PROGRAM_PID" |grep ' mem ' |grep ' REG' |awk '{if (NF==9
 
 while IFS=" " read -r FN_LIB
 do
-	FN_TYPE=$(GetFileCheck "$FN_LIB")
-	if [ "$FN_TYPE" == "0" ] ; then continue; fi
+	#FN_TYPE=$(GetFileCheck "$FN_LIB")
+	#if [ "$FN_TYPE" == "0" ] ; then continue; fi
 
 	FN_SIZE=$(GetFileSize "$FN_LIB")
 	FN_DATE=$(GetFileDate "$FN_LIB")
