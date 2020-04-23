@@ -3,7 +3,7 @@
 ## Certfication Report Script
 ## 2019.02 created by CoreSolution (smlee@sk.com)
 ################################################################################
-SCRIPT_VERSION="20190307"
+SCRIPT_VERSION="20200423"
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
 FLAG_PROGRAM=0
@@ -108,7 +108,7 @@ function skt_echo()
 echo " Certification Report ($HOSTNAME, $SCRIPT_VERSION, $BASH_VERSION)"
 echo " "
 
-./cert_socket_chk.sh > socket.txt 2>/dev/null
+bash ./cert_socket_chk.sh > socket.txt 2>/dev/null
 if [ "$?" != "0" ] ; then
 	skt_echo_failure "cert_socket_chk.sh"
 	cat socket.txt
@@ -116,7 +116,7 @@ if [ "$?" != "0" ] ; then
 fi
 skt_echo_success "cert_socket_chk.sh"
 
-./cert_program_chk.sh socket.txt > program.txt 2>/dev/null
+bash ./cert_program_chk.sh socket.txt > program.txt 2>/dev/null
 if [ "$?" != "0" ] ; then
 	skt_echo_failure "cert_program_chk.sh"
 	cat program.txt
@@ -124,7 +124,7 @@ if [ "$?" != "0" ] ; then
 fi
 skt_echo_success "cert_program_chk.sh"
 
-./cert_file_chk.sh -s "$OPT_DIR" > file.txt 2>/dev/null
+bash ./cert_file_chk.sh -s "$OPT_DIR" > file.txt 2>/dev/null
 if [ "$?" != "0" ] ; then
 	skt_echo_failure "cert_file_chk.sh"
 	cat file.txt
