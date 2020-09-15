@@ -38,25 +38,26 @@ Report Protocol
     +------------+----------------------------------+------------+
 </code></pre>
 
- * 파라메터가 없는 경우에 로컬 시스템을 점검
+ * 파라메터가 없는 경우에 로컬 시스템 점검
 <pre><code>
-
 $ ./cert_check.sh
-Certification Check Script (home, 20200915, 4.2.46(2)-release)
+Certification Check Script (gcloud, 20200915, 4.2.46(2)-release)
 
 +-----------------+------------------+-------------------------------------------+
 | Local Address   | PID/Program name | Certification Information (KST +0900)     |
 +-----------------+------------------+-------------------------------------------+
-| 127.0.0.1:443   | -                | 2020-07-11 18:59:54 ~ 2020-10-09 18:59:54 | C = US, O = Let's Encrypt, CN = Let's Encrypt Authority X3
+| 127.0.0.1:443   | -                | 2020-08-30 23:21:15 ~ 2020-11-28 23:21:15 |  /C=US/O=Let's Encrypt/CN=Let's Encrypt Authority X3
 +-----------------+------------------+-------------------------------------------+
 
-$ ./cert_check.sh -a
-Certification Check Script (home, 20200915, 4.2.46(2)-release)
+
+$ sudo ./cert_check.sh -a
+Certification Check Script (gcloud, 20200915, 4.2.46(2)-release)
 
 +-----------------+------------------+-------------------------------------------+
 | Local Address   | PID/Program name | Certification Information (KST +0900)     |
 +-----------------+------------------+-------------------------------------------+
-| 127.0.0.1:80    | -                |                                           |
-| 127.0.0.1:443   | -                | 2020-07-11 18:59:54 ~ 2020-10-09 18:59:54 | C = US, O = Let's Encrypt, CN = Let's Encrypt Authority X3
+| 127.0.0.1:22    | 12870/sshd       |                                           |
+| 127.0.0.1:80    | 4049/httpd       |                                           |
+| 127.0.0.1:443   | 4049/httpd       | 2020-08-30 23:21:15 ~ 2020-11-28 23:21:15 |  /C=US/O=Let's Encrypt/CN=Let's Encrypt Authority X3
 +-----------------+------------------+-------------------------------------------+
 </code></pre>
