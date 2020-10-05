@@ -3,7 +3,7 @@
 # Certfication Check Script
 # 2019.09.17 created by CoreSolution (smlee@sk.com)
 ################################################################################
-SCRIPT_VERSION="20200915"
+SCRIPT_VERSION="20200928"
 LC_ALL=en_US.UTF-8
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -207,6 +207,9 @@ else
 		line=$(StringCat "127.0.0.1:$pp" "15")
 		if [ "$UID" == "0" ] ; then
 			pg=$(netstat -nap |grep "^tcp" |grep LISTEN |grep ":$pp"|head -1 | awk '{print $NF}')
+			if [[ $pg != *"/"* ]] ; then	
+				pg=$(netstat -nap |grep "^tcp" |grep LISTEN |grep ":$pp"|head -1 | awk '{print $7}')
+			fi
 		else
 			pg="-"
 		fi
