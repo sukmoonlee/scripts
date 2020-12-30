@@ -1,10 +1,11 @@
 #!/bin/bash
 ################################################################################
 ## Program Library Report Script
-## 2019.02 created by CoreSolution (smlee@sk.com)
+## 2019.02 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20191211"
+SCRIPT_VERSION="20201230"
 LANG=en_US.UTF-8
+LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
 
 if [ -f "/bin/readlink" ] ; then PG_readlink="/bin/readlink"
@@ -28,7 +29,7 @@ FLAG_ALL=0
 while [ "$#" -gt 0 ] ; do
 case "$1" in
 	-v|--version)
-		echo $SCRIPT_VERSION
+		echo "$0 $SCRIPT_VERSION"
 		exit 0
 		;;
 	-d|--debug)
@@ -46,7 +47,7 @@ case "$1" in
 esac
 done
 if [ "$PROGRAM_FILE" == "" ] ; then
-	echo "Usage: $0 [filename]"
+	echo "Usage: $0 [-v] [-d] [-a] [file]"
 	exit 0
 fi
 if [ ! -f "$PROGRAM_FILE" ] ; then
@@ -77,7 +78,7 @@ function StringCat
 		RST="$RST$name "
 	fi
 
-	echo "$RST";
+	echo "$RST"
 }
 function StringLine
 {
@@ -89,13 +90,13 @@ function StringLine
 	do
 		RST="$RST-"
 	done
-	echo "$RST";
+	echo "$RST"
 }
 function GetFileDate
 {
 	local file="$1"
 	if [ ! -f "$file" ] ; then
-		echo "-";
+		echo "-"
 	else
 		local fdate
 		fdate=$($PG_ls --full-time "$file" |awk '{print $6,substr($7,0,8)}')
@@ -106,7 +107,7 @@ function GetFileSize
 {
 	local file="$1"
 	if [ ! -f "$file" ] ; then
-		echo "-";
+		echo "-"
 	else
 		local fsize
 		fsize=$($PG_ls --full-time "$file" |awk '{print $5}')
@@ -117,7 +118,7 @@ function GetFileMd5
 {
 	local file="$1"
 	if [ ! -f "$file" ] ; then
-		echo "-";
+		echo "-"
 	else
 		local fmd5
 		fmd5=$($PG_md5sum "$file" |awk '{print $1}')
@@ -136,26 +137,21 @@ LEN_MD5=6
 LEN_LINK=11
 while IFS=" " read -r a b c d
 do
-	#echo "$a , $b , $c , $d"
 	if [ "$b" == "=>" ] ; then
 		if [ "$c" == "not" ] ; then
 			FN_LIB=$(echo "$a"| xargs)
 			if [ ${#FN_LIB} -gt "$LEN_FILE" ] ; then LEN_FILE=${#FN_LIB}; fi
-			continue;
+			continue
 		fi
 		if [ "${c:0:1}" == "(" ] ; then
-			#echo "(case 1) $a , $b , $c , $d"
 			continue
 		else
-			#echo "(case 2) $a , $b , $c , $d"
 			FN_LIB=$c
 		fi
 	else
-		#echo "(case 3) $a , $b , $c , $d"
 		FN_LIB=$(echo "$a"| xargs)
 	fi
 
-	#echo "$FN_LIB"
 	if [ -L "$FN_LIB" ] ; then
 		if [ ${#FN_LIB} -gt $LEN_LINK ] ; then LEN_LINK=${#FN_LIB}; fi
 		FN_LIB=$($PG_readlink -f "$FN_LIB")
@@ -191,19 +187,19 @@ line=$line$(StringLine "" "$LEN_SIZE")
 line=$line$(StringLine "" "$LEN_DATE")
 line=$line$(StringLine "" "$LEN_MD5")
 line=$line$(StringLine "" "$LEN_LINK")
-echo "$line+";
+echo "$line+"
 line=$(StringCat "Filename" "$LEN_FILE")
 line=$line$(StringCat "Size" "$LEN_SIZE")
 line=$line$(StringCat "Date" "$LEN_DATE")
 line=$line$(StringCat "Digest" "$LEN_MD5")
 line=$line$(StringCat "Link Symbol" "$LEN_LINK")
-echo "$line|";
+echo "$line|"
 line=$(StringLine "" "$LEN_FILE")
 line=$line$(StringLine "" "$LEN_SIZE")
 line=$line$(StringLine "" "$LEN_DATE")
 line=$line$(StringLine "" "$LEN_MD5")
 line=$line$(StringLine "" "$LEN_LINK")
-echo "$line+";
+echo "$line+"
 
 FN_LIB=$PROGRAM_FILE
 if [ -L "$FN_LIB" ] ; then
@@ -222,7 +218,7 @@ line=$line$(StringCat "$FN_SIZE" "$LEN_SIZE" "right")
 line=$line$(StringCat "$FN_DATE" "$LEN_DATE")
 line=$line$(StringCat "$FN_MD5" "$LEN_MD5")
 line=$line$(StringCat "$FN_LINK" "$LEN_LINK")
-echo "$line|";
+echo "$line|"
 
 # shellcheck disable=SC2034
 while IFS=" " read -r a b c d
@@ -240,9 +236,9 @@ do
 			line=$line$(StringCat "$FN_DATE" "$LEN_DATE")
 			line=$line$(StringCat "$FN_MD5" "$LEN_MD5")
 			line=$line$(StringCat "$FN_LINK" "$LEN_LINK")
-			echo "$line|";
+			echo "$line|"
 
-			continue;
+			continue
 		fi
 		if [ "${c:0:1}" == "(" ] ; then
 			continue
@@ -269,7 +265,7 @@ do
 	line=$line$(StringCat "$FN_DATE" "$LEN_DATE")
 	line=$line$(StringCat "$FN_MD5" "$LEN_MD5")
 	line=$line$(StringCat "$FN_LINK" "$LEN_LINK")
-	echo "$line|";
+	echo "$line|"
 done < <($PG_ldd "$PROGRAM_FILE"|sort)
 
 line=$(StringLine "" "$LEN_FILE")
@@ -277,7 +273,7 @@ line=$line$(StringLine "" "$LEN_SIZE")
 line=$line$(StringLine "" "$LEN_DATE")
 line=$line$(StringLine "" "$LEN_MD5")
 line=$line$(StringLine "" "$LEN_LINK")
-echo "$line+";
+echo "$line+"
 
 if [ "$FLAG_ALL" == "1" ] ; then
 	echo ""

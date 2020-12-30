@@ -1,9 +1,9 @@
 #!/bin/bash
 ################################################################################
 # Certfication Check Script
-# 2019.09.17 created by CoreSolution (smlee@sk.com)
+# 2020.12.26 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20201008"
+SCRIPT_VERSION="20201230"
 LC_ALL=en_US.UTF-8
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -100,7 +100,6 @@ function PrintCertInfo
 function GetProtocolInfo
 {
 	str=$($PG_TIMEOUT 10 $PG_OPENSSL s_client -connect "$1" -"$2" 2>/dev/null | egrep "Protocol|Cipher|Session-ID:")
-	#echo $str
 
 	ar=($str)
 	if [ "${ar[7]}" == "" ] ; then
@@ -179,12 +178,6 @@ if [ "$TARGET_HOST" != "" ] ; then
 		GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "dtls1_2"
 	fi
 
-	#just=$($PG_OPENSSL s_client help 2>&1 >/dev/null |grep 'just use'|awk '{print $1}')
-	#echo "$just" | while IFS=' ' read ll
-	#do
-	#	GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "$ll"
-	#done
-
 	line=$(StringLine "" "$LEN_PROTOCOL")
 	line=$line$(StringLine "" "$LEN_SUPPORT")
 	line=$line$(StringLine "" "$LEN_CIPHER")
@@ -248,3 +241,5 @@ else
 	line=$line$(StringLine "" "$LEN_CERT")
 	echo "$line+"
 fi
+
+exit 0
