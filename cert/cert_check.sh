@@ -3,7 +3,7 @@
 # Certfication Check Script
 # 2020.12.26 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20201230"
+SCRIPT_VERSION="20210118"
 LC_ALL=en_US.UTF-8
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -99,7 +99,7 @@ function PrintCertInfo
 }
 function GetProtocolInfo
 {
-	str=$($PG_TIMEOUT 10 $PG_OPENSSL s_client -connect "$1" -"$2" 2>/dev/null | egrep "Protocol|Cipher|Session-ID:")
+	str=$($PG_TIMEOUT 10 $PG_OPENSSL s_client -connect "$1" -"$2" 2>/dev/null | egrep -a "Protocol|Cipher|Session-ID:")
 
 	ar=($str)
 	if [ "${ar[7]}" == "" ] ; then
@@ -160,7 +160,7 @@ if [ "$TARGET_HOST" != "" ] ; then
 	line=$line$(StringLine "" "$LEN_CIPHER")
 	echo "    $line+"
 
-	just=$($PG_OPENSSL s_client -help 2>&1 >/dev/null |grep -i 'just use'|awk '{print $1}')
+	just=$($PG_OPENSSL s_client -help 2>&1 >/dev/null |grep -ai 'just use'|awk '{print $1}')
 	GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1"
 	GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1_1"
 	GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1_2"
