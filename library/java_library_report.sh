@@ -3,7 +3,7 @@
 ## Java Library Report Script
 ## 2020.11 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210128"
+SCRIPT_VERSION="20210203"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -186,18 +186,10 @@ echo " Java Library Report Script ($HOSTNAME, $SCRIPT_VERSION, $BASH_VERSION)"
 echo ""
 
 if [ -f "$TMPDIR/file2/META-INF/MANIFEST.MF" ] ; then
-	LEN_FILE1=40
-	LEN_FILE2=40
-
 	echo "# Archive Manifest Information"
-	lineno=$(wc -l "$TMPDIR/file2/META-INF/MANIFEST.MF" |awk '{print $1}')
-	for ((i=1;i<=lineno;i++)); do
-		lastline1=$(sed -n "${i},${i}p" "$TMPDIR/file1/META-INF/MANIFEST.MF" |sed 's/\r//')
-		if [ ${#lastline1} -gt "$LEN_FILE1" ] ; then LEN_FILE1=${#lastline1}; fi
-		lastline2=$(sed -n "${i},${i}p" "$TMPDIR/file2/META-INF/MANIFEST.MF" |sed 's/\r//')
-		if [ ${#lastline2} -gt "$LEN_FILE2" ] ; then LEN_FILE2=${#lastline2}; fi
-	done
 
+	LEN_FILE1=$(awk '{print length($0)}' "$TMPDIR/file1/META-INF/MANIFEST.MF"|sort -nr|head -1)
+	LEN_FILE2=$(awk '{print length($0)}' "$TMPDIR/file2/META-INF/MANIFEST.MF"|sort -nr|head -1)
 	if [ ${#PROGRAM_FILE1} -gt "$LEN_FILE1" ] ; then LEN_FILE1=${#PROGRAM_FILE1}; fi
 	if [ ${#PROGRAM_FILE2} -gt "$LEN_FILE2" ] ; then LEN_FILE2=${#PROGRAM_FILE2}; fi
 
@@ -211,6 +203,7 @@ if [ -f "$TMPDIR/file2/META-INF/MANIFEST.MF" ] ; then
 	line=$line$(StringLine "" "$LEN_FILE2")
 	echo "$line+"
 
+	lineno=$(wc -l "$TMPDIR/file2/META-INF/MANIFEST.MF" |awk '{print $1}')
 	for ((i=1;i<=lineno;i++)); do
 		lastline1=$(sed -n "${i},${i}p" "$TMPDIR/file1/META-INF/MANIFEST.MF" |sed 's/\r//')
 		line=$(StringCat "$lastline1" "$LEN_FILE1")
@@ -225,14 +218,10 @@ if [ -f "$TMPDIR/file2/META-INF/MANIFEST.MF" ] ; then
 	echo "$line+"
 	echo ""
 elif [ "$PROGRAM_FILE2" == "" ] && [ -f "$TMPDIR/file1/META-INF/MANIFEST.MF" ] ; then
-	LEN_FILE1=40
-
 	echo "# Archive Manifest Information"
-	lineno=$(wc -l "$TMPDIR/file1/META-INF/MANIFEST.MF" |awk '{print $1}')
-	for ((i=1;i<=lineno;i++)); do
-		lastline1=$(sed -n "${i},${i}p" "$TMPDIR/file1/META-INF/MANIFEST.MF" |sed 's/\r//')
-		if [ ${#lastline1} -gt "$LEN_FILE1" ] ; then LEN_FILE1=${#lastline1}; fi
-	done
+
+	LEN_FILE1=$(awk '{print length($0)}' "$TMPDIR/file1/META-INF/MANIFEST.MF"|sort -nr|head -1)
+	if [ ${#PROGRAM_FILE1} -gt "$LEN_FILE1" ] ; then LEN_FILE1=${#PROGRAM_FILE1}; fi
 
 	line=$(StringLine "" "$LEN_FILE1")
 	echo "$line+"
@@ -241,6 +230,7 @@ elif [ "$PROGRAM_FILE2" == "" ] && [ -f "$TMPDIR/file1/META-INF/MANIFEST.MF" ] ;
 	line=$(StringLine "" "$LEN_FILE1")
 	echo "$line+"
 
+	lineno=$(wc -l "$TMPDIR/file1/META-INF/MANIFEST.MF" |awk '{print $1}')
 	for ((i=1;i<=lineno;i++)); do
 		lastline1=$(sed -n "${i},${i}p" "$TMPDIR/file1/META-INF/MANIFEST.MF" |sed 's/\r//')
 		line=$(StringCat "$lastline1" "$LEN_FILE1")
@@ -253,10 +243,35 @@ elif [ "$PROGRAM_FILE2" == "" ] && [ -f "$TMPDIR/file1/META-INF/MANIFEST.MF" ] ;
 	echo ""
 fi
 
+echo "# Archive Library Information"
 LEN_FILE1=40
 LEN_FILE2=40
 LEN_MEMO=20
-echo "# Archive Library Information"
+
+LEN=$(find "$TMPDIR/file1/" -name "*.jar" |awk "{print length(\$0)-length(\"$TMPDIR/file1/\")}" |sort -nr |head -1)
+if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE1" ] ; then LEN_FILE1=$LEN; fi
+if [ "$PROGRAM_FILE2" != "" ] ; then
+	LEN=$(find "$TMPDIR/file2/" -name "*.jar" |awk "{print length(\$0)-length(\"$TMPDIR/file2/\")}" |sort -nr |head -1)
+	if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE2" ] ; then LEN_FILE2=$LEN; fi
+fi
+
+if [ "$FLAG_CLASS" == "1" ] ; then
+	LEN=$(find "$TMPDIR/file1/" -name "*.class" |awk "{print length(\$0)-length(\"$TMPDIR/file1/\")}" |sort -nr |head -1)
+	if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE1" ] ; then LEN_FILE1=$LEN; fi
+	if [ "$PROGRAM_FILE2" != "" ] ; then
+		LEN=$(find "$TMPDIR/file2/" -name "*.class" |awk "{print length(\$0)-length(\"$TMPDIR/file2/\")}" |sort -nr |head -1)
+		if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE2" ] ; then LEN_FILE2=$LEN; fi
+	fi
+fi
+if [ "$FLAG_JSP" == "1" ] ; then
+	LEN=$(find "$TMPDIR/file1/" -name "*.jsp" |awk "{print length(\$0)-length(\"$TMPDIR/file1/\")}" |sort -nr |head -1)
+	if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE1" ] ; then LEN_FILE1=$LEN; fi
+	if [ "$PROGRAM_FILE2" != "" ] ; then
+		LEN=$(find "$TMPDIR/file2/" -name "*.jsp" |awk "{print length(\$0)-length(\"$TMPDIR/file2/\")}" |sort -nr |head -1)
+		if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE2" ] ; then LEN_FILE2=$LEN; fi
+	fi
+fi
+
 while IF=" " read fn chksum
 do
 	DIR="$TMPDIR/file1/"
