@@ -3,7 +3,7 @@
 # Certfication Check Script
 # 2020.12.26 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210118"
+SCRIPT_VERSION="20210221"
 LC_ALL=en_US.UTF-8
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -16,53 +16,56 @@ if [ -f "/bin/timeout" ] ; then PG_TIMEOUT="/bin/timeout"
 elif [ -f "/usr/bin/timeout" ] ; then PG_TIMEOUT="/usr/bin/timeout"
 elif [ -f "/usr/share/doc/bash-3.2/scripts/timeout" ] ; then PG_TIMEOUT="bash /usr/share/doc/bash-3.2/scripts/timeout"
 else echo "Error - Command not found 'timeout'"; exit 1; fi
+if [ -f "/usr/bin/netstat" ] ; then PG_NETSTAT="/usr/bin/netstat"
+elif [ -f "/bin/netstat" ] ; then PG_NETSTAT="/bin/netstat"
+else echo "Error - Command not found 'netstat'"; exit 1; fi
 ################################################################################
+function Usage
+{
+	echo "Usage: $0 [-rdvh] [{hostname/ip}:{port}]"
+	echo "      -r, --report  : print only secure socket information"
+	echo "      -d, --debug   : set debug(-x)"
+	echo "      -v, --version : print version ($SCRIPT_VERSION)"
+	echo "      -h, --help    : help"
+}
 TARGET_HOST=
 TARGET_PORT=
-FLAG_ALL=0
+FLAG_REPORT=0
 while [ "$#" -gt 0 ] ; do
 case "$1" in
 	-v|--version)
 		echo "$0 $SCRIPT_VERSION"
 		exit 0
 		;;
-	-h|--host)
-		shift 1
-		TARGET_HOST="$1"
-		shift 1
-		;;
-	-p|--port)
-		shift 1
-		TARGET_PORT="$1"
-		shift 1
-		;;
 	-d|--debug)
 		set -x
 		shift 1
 		;;
-	-a|--all)
-		FLAG_ALL=1
+	-r|--report)
+		FLAG_REPORT=1
 		shift 1
 		;;
-	--help)
-		echo "Usage: $0 -h {Hostname/IP} -p {Port}"
-		exit 1
+	-h|--help)
+		Usage
+		exit 0
 		;;
-	 *)
-		if [[ $1 =~ : ]] ; then
+	*)
+		if [ "$TARGET_HOST" == "" ] && [[ $1 =~ : ]] ; then
 			ARG=(${1/:/ })
 			TARGET_HOST=${ARG[0]}
 			TARGET_PORT=${ARG[1]}
 			shift 1
 		else
-			echo "Unknown Option"
+			echo "Unknown option: $1"
+			echo
+			Usage
 			exit 1
 		fi
 		;;
 esac
 done
 ################################################################################
-function StringCat
+function _stringCat
 {
 	local name="$1"
 	local len="$2"
@@ -77,7 +80,7 @@ function StringCat
 	done
 	echo "$RST"
 }
-function StringLine
+function _stringLine
 {
 	local name="$1"
 	local len="$2"
@@ -88,6 +91,56 @@ function StringLine
 		RST="$RST-"
 	done
 	echo "$RST"
+}
+_STRING_NO=0
+_STRING_LIST=()
+function makeString
+{
+	if [ "$2" == "newline" ] ; then
+		_STRING_NO=$((_STRING_NO+1))
+		_STRING_LIST[$_STRING_NO]=""
+	fi
+	_STRING_LIST[$_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1|"
+}
+function printString
+{
+	local SLEN=()
+	for _row in "${_STRING_LIST[@]}"; do
+		IFS='|' read -r -a _array <<< "$_row"
+		local _col_cnt=0
+		for _col in "${_array[@]}"; do
+			if [ "${SLEN[$_col_cnt]}" == "" ] ; then
+				SLEN[$_col_cnt]=0
+			fi
+			if [ "${#_col}" -gt "${SLEN[$_col_cnt]}" ] ; then
+				SLEN[$_col_cnt]=${#_col}
+			fi
+			_col_cnt=$((_col_cnt+1))
+		done
+	done
+
+	for _row in "${_STRING_LIST[@]}"; do
+		IFS='|' read -r -a _array <<< "$_row"
+		local _col_cnt=0
+		local _line=
+		local _last_flag=0
+		for _col in "${_array[@]}"; do
+			if [ "$_col" == "-" ] ; then
+				_line=$_line$(_stringLine "" "${SLEN[$_col_cnt]}")
+				_last_flag=1
+			else
+				_line=$_line$(_stringCat "$_col" "${SLEN[$_col_cnt]}")
+				_last_flag=0
+				if [ "${_col:0:4}" == " >>>" ] ; then _last_flag=2; fi
+			fi
+			_col_cnt=$((_col_cnt+1))
+		done
+		if [ "$_line" != "" ] ; then
+			if [ "$_last_flag" == "0" ] ; then echo "$_line|"
+			elif [ "$_last_flag" == "2" ] ; then echo "$_line"
+			else echo "$_line+"; fi
+		fi
+	done
 }
 function PrintCertInfo
 {
@@ -104,34 +157,33 @@ function GetProtocolInfo
 	ar=($str)
 	if [ "${ar[7]}" == "" ] ; then
 		if [ "${ar[1]}" == "" ] || [ "${ar[1]}" == "(NONE)," ] ; then
-			line=$(StringCat "$2" "$LEN_PROTOCOL")
+			makeString " $2" "newline"
 		else
-			line=$(StringCat "${ar[1]:0:-1}" "$LEN_PROTOCOL")
+			makeString " ${ar[1]:0:-1} " "newline"
 		fi
 	else
-		line=$(StringCat "${ar[7]}" "$LEN_PROTOCOL")
+		makeString " ${ar[7]} " "newline"
 	fi
 
 	if [ "${ar[12]}" == "" ] ; then
 		if [ "${ar[4]}" != "" ] && [ "${ar[4]}" != "(NONE)" ] ; then
-			line=$line$(StringCat "  O" "$LEN_SUPPORT")
+			makeString "   O"
 		else
-			line=$line$(StringCat "  X" "$LEN_SUPPORT")
+			makeString "   X"
 		fi
 	else
-		line=$line$(StringCat "  O" "$LEN_SUPPORT")
+		makeString "   O"
 	fi
 
 	if [ "${ar[10]}" == "" ] ; then
 		if [ "${ar[4]}" == "" ] || [ "${ar[4]}" == "(NONE)" ] ; then
-			line=$line$(StringCat "" "$LEN_CIPHER")
+			makeString ""
 		else
-			line=$line$(StringCat "${ar[4]}" "$LEN_CIPHER")
+			makeString " ${ar[4]} "
 		fi
 	else
-		line=$line$(StringCat "${ar[10]}" "$LEN_CIPHER")
+		makeString " ${ar[10]} "
 	fi
-	echo "    $line|"
 }
 ################################################################################
 echo "Certification Check Script ($HOSTNAME, $SCRIPT_VERSION, $BASH_VERSION)"
@@ -143,22 +195,11 @@ if [ "$TARGET_HOST" != "" ] ; then
 	echo ""
 
 	echo "Report Protocol"
-	LEN_PROTOCOL=10
-	LEN_SUPPORT=5
-	LEN_CIPHER=33
-
-	line=$(StringLine "" "$LEN_PROTOCOL")
-	line=$line$(StringLine "" "$LEN_SUPPORT")
-	line=$line$(StringLine "" "$LEN_CIPHER")
-	echo "    $line+"
-	line=$(StringCat " Protocol " "$LEN_PROTOCOL")
-	line=$line$(StringCat "allow" "$LEN_SUPPORT")
-	line=$line$(StringCat "Cipher" "$LEN_CIPHER")
-	echo "    $line|"
-	line=$(StringLine "" "$LEN_PROTOCOL")
-	line=$line$(StringLine "" "$LEN_SUPPORT")
-	line=$line$(StringLine "" "$LEN_CIPHER")
-	echo "    $line+"
+	makeString "-" "newline"; makeString "-"; makeString "-";
+	makeString " Protocol " "newline"
+	makeString " allow "
+	makeString " Cipher "
+	makeString "-" "newline"; makeString "-"; makeString "-";
 
 	just=$($PG_OPENSSL s_client -help 2>&1 >/dev/null |grep -ai 'just use'|awk '{print $1}')
 	GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "tls1"
@@ -178,49 +219,81 @@ if [ "$TARGET_HOST" != "" ] ; then
 		GetProtocolInfo "$TARGET_HOST:$TARGET_PORT" "dtls1_2"
 	fi
 
-	line=$(StringLine "" "$LEN_PROTOCOL")
-	line=$line$(StringLine "" "$LEN_SUPPORT")
-	line=$line$(StringLine "" "$LEN_CIPHER")
-	echo "    $line+"
-else
-	LEN_PORT=15
-	LEN_PID=19
-	LEN_CERT=41
+	makeString "-" "newline"; makeString "-"; makeString "-";
+	printString |tee |sed 's/^/    /'
+elif [ "$FLAG_REPORT" == "1" ] ; then
+	makeString "-" "newline"; makeString "-"; makeString "-";
+	makeString " Test Socket " "newline"
+	makeString " PID/Program "
+	makeString " Certification Information ($(date +%Z\ %z)) "
+	makeString "-" "newline"; makeString "-"; makeString "-";
 
-	line=$(StringLine "" "$LEN_PORT")
-	line=$line$(StringLine "" "$LEN_PID")
-	line=$line$(StringLine "" "$LEN_CERT")
-	echo "$line+"
-	line=$(StringCat " Local Address" "$LEN_PORT")
-	line=$line$(StringCat " PID/Program" "$LEN_PID")
-	str=$(date +%Z\ %z)
-	line=$line$(StringCat " Certification Information ($str)" "$LEN_CERT")
-	echo "$line|"
-	line=$(StringLine "" "$LEN_PORT")
-	line=$line$(StringLine "" "$LEN_PID")
-	line=$line$(StringLine "" "$LEN_CERT")
-	echo "$line+"
-
-	pplist=$(netstat -na |grep ^tcp |grep LISTEN |awk '{print $4}' | awk -F: '{print $NF}' |sort -un)
+	pplist=$($PG_NETSTAT -na |grep ^tcp |grep LISTEN |awk '{print $4}' | awk -F: '{print $NF}' |sort -un)
 	for pp in $pplist
 	do
-		line=$(StringCat "127.0.0.1:$pp" "$LEN_PORT")
+		str=$($PG_TIMEOUT 1 $PG_OPENSSL s_client -connect "127.0.0.1:$pp" 2>/dev/null | $PG_OPENSSL x509 -dates -noout 2>/dev/null)
+		if [ "$str" == "" ] ; then continue; fi
+		makeString " 127.0.0.1:$pp " "newline"
+
 		if [ "$UID" == "0" ] ; then
-			pg=$(netstat -nap |grep "^tcp" |grep LISTEN |grep ":$pp"|head -1 | awk '{print $NF}')
-			if [[ $pg != *"/"* ]] ; then
-				pg=$(netstat -nap |grep "^tcp" |grep LISTEN |grep ":$pp"|head -1 | awk '{print $7}')
-			fi
+			pg=$($PG_NETSTAT -nap |grep "^tcp" |grep LISTEN |grep ":$pp"|head -1 | awk '{print $7}')
 		else
 			pg="-"
 		fi
-		line=$line$(StringCat "$pg" "$LEN_PID")
+		makeString " $pg "
 
-		str=$($PG_TIMEOUT 1 $PG_OPENSSL s_client -connect "127.0.0.1:$pp" 2>/dev/null | $PG_OPENSSL x509 -dates -noout 2>/dev/null)
+		pstr=$(echo "$str" | sed 's/notBefore=//g' | sed 's/notAfter=/ ~ /g' |tr -d '\n')
+		pstr1=$(date --date="${pstr:0:24}" +%Y-%m-%d\ %H:%M:%S)
+		pstr2=$(date --date="${pstr:27:24}" +%Y-%m-%d\ %H:%M:%S)
+		pstr="$pstr1 ~ $pstr2"
+		makeString " $pstr "
+
+		str=$($PG_TIMEOUT 1 $PG_OPENSSL s_client -connect "127.0.0.1:$pp" 2>/dev/null | $PG_OPENSSL x509 -issuer -noout 2>/dev/null)
+		pstr1=${str//issuer=/ }
+		if [ "$pstr1" != "" ] ; then makeString " >>>$pstr1"; fi
+	done
+
+	makeString "-" "newline"; makeString "-"; makeString "-";
+	printString
+else
+	makeString "-" "newline"; makeString "-"; makeString "-"; makeString "-";
+	makeString " Listen Socket " "newline"
+	makeString " Test Socket "
+	makeString " PID/Program "
+	makeString " Certification Information ($(date +%Z\ %z)) "
+	makeString "-" "newline"; makeString "-"; makeString "-"; makeString "-";
+
+	pplist=$($PG_NETSTAT -nap 2>/dev/null |grep ^tcp |grep LISTEN)
+	pparray=()
+	cnt=0
+	while read pp
+	do
+		cnt=$((cnt+1))
+		pparray[cnt]=$pp
+	done <<< "$pplist"
+
+	for i in $(seq 1 ${#pparray[@]})
+	do
+		IFS=' ' read -r -a _array <<< "${pparray[$i]}"
+		makeString " ${_array[3]} " "newline"
+
+		str_ip=$(echo "${_array[3]}" | awk -F: '{print substr($0,0,length($0)-length($NF)-1)}')
+		str_port=$(echo "${_array[3]}" | awk -F: '{print $NF}')
+		if [ "${_array[0]}" == "tcp" ] && [ "$str_ip" == "0.0.0.0" ] ; then
+			str_addr="127.0.0.1:$str_port"
+		elif [ "${_array[0]}" == "tcp6" ] && [ "$str_ip" == "::" ] ; then
+			str_addr="[::1]:$str_port"
+		elif [ "${_array[0]}" == "tcp" ] ; then
+			str_addr="$str_ip:$str_port"
+		elif [ "${_array[0]}" == "tcp6" ] ; then
+			str_addr="[$str_ip]:$str_port"
+		fi
+		makeString " $str_addr "
+		makeString " ${_array[6]} "
+
+		str=$($PG_TIMEOUT 1 $PG_OPENSSL s_client -connect "$str_addr" 2>/dev/null | $PG_OPENSSL x509 -dates -noout 2>/dev/null)
 		if [ "$str" == "" ] ; then
-			if [ "$FLAG_ALL" == "1" ] ; then
-				line=$line$(StringCat "" "$LEN_CERT")
-				echo "$line|"
-			fi
+			makeString ""
 			continue
 		fi
 
@@ -228,18 +301,15 @@ else
 		pstr1=$(date --date="${pstr:0:24}" +%Y-%m-%d\ %H:%M:%S)
 		pstr2=$(date --date="${pstr:27:24}" +%Y-%m-%d\ %H:%M:%S)
 		pstr="$pstr1 ~ $pstr2"
+		makeString " $pstr "
 
-		line=$line$(StringCat "$pstr" "$LEN_CERT")
-
-		str=$($PG_TIMEOUT 1 $PG_OPENSSL s_client -connect "127.0.0.1:$pp" 2>/dev/null | $PG_OPENSSL x509 -issuer -noout 2>/dev/null)
-		pstr=${str//issuer=/ }
-		echo "$line|$pstr"
+		str=$($PG_TIMEOUT 1 $PG_OPENSSL s_client -connect "$str_addr" 2>/dev/null | $PG_OPENSSL x509 -issuer -noout 2>/dev/null)
+		pstr1=${str//issuer=/ }
+		if [ "$pstr1" != "" ] ; then makeString " >>>$pstr1"; fi
 	done
 
-	line=$(StringLine "" "$LEN_PORT")
-	line=$line$(StringLine "" "$LEN_PID")
-	line=$line$(StringLine "" "$LEN_CERT")
-	echo "$line+"
+	makeString "-" "newline"; makeString "-"; makeString "-"; makeString "-";
+	printString
 fi
 
 exit 0
