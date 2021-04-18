@@ -24,7 +24,11 @@ case "$1" in
 		FLAG_ALL=1
 		shift 1
 		;;
-	 *)
+	*)
+		if [ "$PROGRAM_PID" != "" ] ; then
+			echo "unknown option: $1"
+			exit 1
+		fi
 		PROGRAM_PID="$1"
 		shift 1
 		;;

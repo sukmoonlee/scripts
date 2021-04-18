@@ -1,9 +1,10 @@
 #!/bin/bash
+set +o posix
 ################################################################################
 ## Java Library Report Script
 ## 2020.11 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210203"
+SCRIPT_VERSION="20210413"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -27,7 +28,13 @@ case "$1" in
 		shift 1
 		;;
 	-p|--path)
-		TMPDIR=$1
+		shift 1
+		if [ -d "$1" ] ; then
+			TMPDIR=$1
+		else
+			echo "ERROR: not exist '$1' directory"
+			exit 1
+		fi
 		shift 1
 		;;
 	-a|--all)
@@ -42,11 +49,14 @@ case "$1" in
 		FLAG_JSP=1
 		shift 1
 		;;
-	 *)
+	*)
 		if [ "$PROGRAM_FILE1" == "" ] ; then
 			PROGRAM_FILE1="$1"
-		else
+		elif [ "$PROGRAM_FILE2" == "" ] ; then
 			PROGRAM_FILE2="$1"
+		else
+			echo "unknown option: $1"
+			exit 1
 		fi
 		shift 1
 		;;
@@ -66,7 +76,7 @@ if [ "$PROGRAM_FILE2" != "" ] && [ ! -f "$PROGRAM_FILE2" ] ; then
 	exit 1
 fi
 ################################################################################
-function StringCat
+function _stringCat
 {
 	local name="$1"
 	local len="$2"
@@ -74,35 +84,98 @@ function StringCat
 
 	local len_name=${#name}
 	local cnt_space=$((len-len_name))
-	local RST="| $name"
+	local RST="|$name"
 
-	if [ "$align" == "right" ] ; then
-		RST="|"
-	fi
-
-	for ((i=0; i<cnt_space+1; i++))
+	if [ "$align" == "right" ] ; then RST="|"; fi
+	for ((i=0; i<cnt_space; i++))
 	do
 		RST="$RST "
 	done
 
-	if [ "$align" == "right" ] ; then
-		RST="$RST$name "
-	fi
-
+	if [ "$align" == "right" ] ; then RST="$RST$name"; fi
 	echo "$RST"
 }
-function StringLine
+function _stringLine
 {
 	local name="$1"
 	local len="$2"
 	local RST="+"
 
-	for ((i=0; i<len+2; i++))
+	for ((i=0; i<len; i++))
 	do
 		RST="$RST-"
 	done
 	echo "$RST"
 }
+_STRING_NO=0
+_STRING_LIST=()
+function makeString
+{
+	if [ "$2" == "new" ] ; then
+		_STRING_LIST=()
+		_STRING_NO=0
+		_STRING_LIST[$_STRING_NO]=""
+	elif [ "$2" == "newline" ] ; then
+		_STRING_NO=$((_STRING_NO+1))
+		_STRING_LIST[$_STRING_NO]=""
+	fi
+
+	if [ "$3" == "right" ] ; then
+		_STRING_LIST[$_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1~R|"
+	else
+		_STRING_LIST[$_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1|"
+	fi
+}
+function printString
+{
+	local SLEN=()
+	for _row in "${_STRING_LIST[@]}"; do
+		IFS='|' read -r -a _array <<< "$_row"
+		local _col_cnt=0
+		for _col in "${_array[@]}"; do
+			if [ "${SLEN[$_col_cnt]}" == "" ] ; then
+				SLEN[$_col_cnt]=0
+			fi
+			local _len=${#_col}
+			if [ "${_col:$((_len-2)):2}" == "~R" ] ; then
+				_len=$((_len-2))
+			fi
+			if [ "$_len" -gt "${SLEN[$_col_cnt]}" ] ; then
+				SLEN[$_col_cnt]=$_len
+			fi
+			_col_cnt=$((_col_cnt+1))
+		done
+	done
+
+	for _row in "${_STRING_LIST[@]}"; do
+		IFS='|' read -r -a _array <<< "$_row"
+		local _col_cnt=0
+		local _line=
+		local _last_flag=0
+		for _col in "${_array[@]}"; do
+			if [ "$_col" == "-" ] ; then
+				_line=$_line$(_stringLine "" "${SLEN[$_col_cnt]}")
+				_last_flag=1
+			else
+				local _len=${#_col}
+				if [ "${_col:$((_len-2)):2}" == "~R" ] ; then
+					_line=$_line$(_stringCat "${_col:0:$((_len-2))}" "${SLEN[$_col_cnt]}" "right")
+				else
+					_line=$_line$(_stringCat "$_col" "${SLEN[$_col_cnt]}")
+				fi
+				_last_flag=0
+				if [ "${_col:0:4}" == " >>>" ] ; then _last_flag=2; fi
+			fi
+			_col_cnt=$((_col_cnt+1))
+		done
+		if [ "$_line" != "" ] ; then
+			if [ "$_last_flag" == "0" ] ; then echo "$_line|"
+			elif [ "$_last_flag" == "2" ] ; then echo "$_line"
+			else echo "$_line+"; fi
+		fi
+	done
+}
+################################################################################
 function GetFileSize
 {
 	local file="$1"
@@ -165,8 +238,10 @@ if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR)"; exit 1; fi
 
 mkdir -p "$TMPDIR/file1/"
 if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR/file1/)"; exit 1; fi
-mkdir -p "$TMPDIR/file2/"
-if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR/file2/)"; exit 1; fi
+if [ "$PROGRAM_FILE2" != "" ] ; then
+	mkdir -p "$TMPDIR/file2/"
+	if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR/file2/)"; exit 1; fi
+fi
 
 unzip "$PROGRAM_FILE1" -d "$TMPDIR/file1/" &> /dev/null
 if [ "$?" != "0" ] ; then echo "unzip error $PROGRAM_FILE1 ($?)"; exit 1; fi
@@ -187,132 +262,62 @@ echo ""
 
 if [ -f "$TMPDIR/file2/META-INF/MANIFEST.MF" ] ; then
 	echo "# Archive Manifest Information"
-
-	LEN_FILE1=$(awk '{print length($0)}' "$TMPDIR/file1/META-INF/MANIFEST.MF"|sort -nr|head -1)
-	LEN_FILE2=$(awk '{print length($0)}' "$TMPDIR/file2/META-INF/MANIFEST.MF"|sort -nr|head -1)
-	if [ ${#PROGRAM_FILE1} -gt "$LEN_FILE1" ] ; then LEN_FILE1=${#PROGRAM_FILE1}; fi
-	if [ ${#PROGRAM_FILE2} -gt "$LEN_FILE2" ] ; then LEN_FILE2=${#PROGRAM_FILE2}; fi
-
-	line=$(StringLine "" "$LEN_FILE1")
-	line=$line$(StringLine "" "$LEN_FILE2")
-	echo "$line+"
-	line=$(StringCat "$PROGRAM_FILE1" "$LEN_FILE1")
-	line=$line$(StringCat "$PROGRAM_FILE2" "$LEN_FILE2")
-	echo "$line|"
-	line=$(StringLine "" "$LEN_FILE1")
-	line=$line$(StringLine "" "$LEN_FILE2")
-	echo "$line+"
+	makeString "-" "new"; makeString "-"
+	makeString "$PROGRAM_FILE1" "newline"
+	makeString "$PROGRAM_FILE2"
+	makeString "-" "newline"; makeString "-"
 
 	lineno=$(wc -l "$TMPDIR/file2/META-INF/MANIFEST.MF" |awk '{print $1}')
 	for ((i=1;i<=lineno;i++)); do
 		lastline1=$(sed -n "${i},${i}p" "$TMPDIR/file1/META-INF/MANIFEST.MF" |sed 's/\r//')
-		line=$(StringCat "$lastline1" "$LEN_FILE1")
+		makeString "$lastline1" "newline"
 		lastline2=$(sed -n "${i},${i}p" "$TMPDIR/file2/META-INF/MANIFEST.MF" |sed 's/\r//')
-		line=$line$(StringCat "$lastline2" "$LEN_FILE2")
+		makeString "$lastline2"
 		if [ "$lastline1" == "" ] && [ "$lastline2" == "" ] ; then continue; fi
-		echo "$line|"
 	done
 
-	line=$(StringLine "" "$LEN_FILE1")
-	line=$line$(StringLine "" "$LEN_FILE2")
-	echo "$line+"
+	makeString "-" "newline"; makeString "-"
+	printString
 	echo ""
 elif [ "$PROGRAM_FILE2" == "" ] && [ -f "$TMPDIR/file1/META-INF/MANIFEST.MF" ] ; then
 	echo "# Archive Manifest Information"
-
-	LEN_FILE1=$(awk '{print length($0)}' "$TMPDIR/file1/META-INF/MANIFEST.MF"|sort -nr|head -1)
-	if [ ${#PROGRAM_FILE1} -gt "$LEN_FILE1" ] ; then LEN_FILE1=${#PROGRAM_FILE1}; fi
-
-	line=$(StringLine "" "$LEN_FILE1")
-	echo "$line+"
-	line=$(StringCat "$PROGRAM_FILE1" "$LEN_FILE1")
-	echo "$line|"
-	line=$(StringLine "" "$LEN_FILE1")
-	echo "$line+"
+	makeString "-" "new"
+	makeString "$PROGRAM_FILE1" "newline"
+	makeString "-" "newline"
 
 	lineno=$(wc -l "$TMPDIR/file1/META-INF/MANIFEST.MF" |awk '{print $1}')
 	for ((i=1;i<=lineno;i++)); do
 		lastline1=$(sed -n "${i},${i}p" "$TMPDIR/file1/META-INF/MANIFEST.MF" |sed 's/\r//')
-		line=$(StringCat "$lastline1" "$LEN_FILE1")
+		makeString "$lastline1" "newline"
 		if [ "$lastline1" == "" ] ; then continue; fi
-		echo "$line|"
 	done
 
-	line=$(StringLine "" "$LEN_FILE1")
-	echo "$line+"
+	makeString "-" "newline"
+	printString
 	echo ""
 fi
 
 echo "# Archive Library Information"
-LEN_FILE1=40
-LEN_FILE2=40
-LEN_MEMO=20
-
-LEN=$(find "$TMPDIR/file1/" -name "*.jar" |awk "{print length(\$0)-length(\"$TMPDIR/file1/\")}" |sort -nr |head -1)
-if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE1" ] ; then LEN_FILE1=$LEN; fi
 if [ "$PROGRAM_FILE2" != "" ] ; then
-	LEN=$(find "$TMPDIR/file2/" -name "*.jar" |awk "{print length(\$0)-length(\"$TMPDIR/file2/\")}" |sort -nr |head -1)
-	if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE2" ] ; then LEN_FILE2=$LEN; fi
-fi
-
-if [ "$FLAG_CLASS" == "1" ] ; then
-	LEN=$(find "$TMPDIR/file1/" -name "*.class" |awk "{print length(\$0)-length(\"$TMPDIR/file1/\")}" |sort -nr |head -1)
-	if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE1" ] ; then LEN_FILE1=$LEN; fi
-	if [ "$PROGRAM_FILE2" != "" ] ; then
-		LEN=$(find "$TMPDIR/file2/" -name "*.class" |awk "{print length(\$0)-length(\"$TMPDIR/file2/\")}" |sort -nr |head -1)
-		if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE2" ] ; then LEN_FILE2=$LEN; fi
-	fi
-fi
-if [ "$FLAG_JSP" == "1" ] ; then
-	LEN=$(find "$TMPDIR/file1/" -name "*.jsp" |awk "{print length(\$0)-length(\"$TMPDIR/file1/\")}" |sort -nr |head -1)
-	if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE1" ] ; then LEN_FILE1=$LEN; fi
-	if [ "$PROGRAM_FILE2" != "" ] ; then
-		LEN=$(find "$TMPDIR/file2/" -name "*.jsp" |awk "{print length(\$0)-length(\"$TMPDIR/file2/\")}" |sort -nr |head -1)
-		if [ "$LEN" != "" ] && [ "$LEN" -gt "$LEN_FILE2" ] ; then LEN_FILE2=$LEN; fi
-	fi
-fi
-
-while IF=" " read fn chksum
-do
-	DIR="$TMPDIR/file1/"
-	len=$((${#fn}-${#DIR}))
-	if [ $len -gt "$LEN_FILE1" ] ; then LEN_FILE1=$len; fi
-done < <(cat "$TMPDIR/file1.jar.txt")
-if [ "$PROGRAM_FILE2" != "" ] ; then
-	while IF=" " read fn chksum
-	do
-		DIR="$TMPDIR/file2/"
-		len=$((${#fn}-${#DIR}))
-		if [ $len -gt "$LEN_FILE2" ] ; then LEN_FILE2=$len; fi
-	done < <(cat "$TMPDIR/file2.jar.txt")
 	JARFILE="$TMPDIR/file2.jar.txt"
 	CLASSFILE="$TMPDIR/file2.class.txt"
 	JSPFILE="$TMPDIR/file2.jsp.txt"
 else
-	LEN_FILE2=10
-	LEN_MEMO=32
 	JARFILE="$TMPDIR/file1.jar.txt"
 	CLASSFILE="$TMPDIR/file1.class.txt"
 	JSPFILE="$TMPDIR/file1.jsp.txt"
 fi
 
-line=$(StringLine "" "$LEN_FILE1")
-line=$line$(StringLine "" "$LEN_FILE2")
-line=$line$(StringLine "" "$LEN_MEMO")
-echo "$line+"
-line=$(StringCat "$PROGRAM_FILE1" "$LEN_FILE1")
+makeString "-" "new"; makeString "-"; makeString "-"
+makeString "$PROGRAM_FILE1" "newline"
 if [ "$PROGRAM_FILE2" != "" ] ; then
-	line=$line$(StringCat "$PROGRAM_FILE2" "$LEN_FILE2")
-	line=$line$(StringCat "Description" "$LEN_MEMO")
+	makeString "$PROGRAM_FILE2"
+	makeString " Description "
 else
-	line=$line$(StringCat "Size" "$LEN_FILE2")
-	line=$line$(StringCat "Checksum" "$LEN_MEMO")
+	makeString " Size "
+	makeString " Checksum "
 fi
-echo "$line|"
-line=$(StringLine "" "$LEN_FILE1")
-line=$line$(StringLine "" "$LEN_FILE2")
-line=$line$(StringLine "" "$LEN_MEMO")
-echo "$line+"
+makeString "-" "newline"; makeString "-"; makeString "-"
 
 function JavaReportLibrary
 {
@@ -326,10 +331,9 @@ function JavaReportLibrary
 			pfilename1=${fn:$len}
 			FN_SIZE=$(GetFileSize "$fn")
 
-			line=$(StringCat "$pfilename1" "$LEN_FILE1")
-			line=$line$(StringCat "$FN_SIZE" "$LEN_FILE2" "right")
-			line=$line$(StringCat "$chksum" "$LEN_MEMO")
-			echo "$line|"
+			makeString "$pfilename1" "newline"
+			makeString "$FN_SIZE" "" "right"
+			makeString "$chksum"
 			continue
 		fi
 
@@ -393,24 +397,17 @@ function JavaReportLibrary
 			fi
 		fi
 
-		line=$(StringCat "$pfilename1" "$LEN_FILE1")
-		line=$line$(StringCat "$pfilename2" "$LEN_FILE2")
-		line=$line$(StringCat "$STR" "$LEN_MEMO")
-		echo "$line|"
+		makeString "$pfilename1" "newline"
+		makeString "$pfilename2"
+		makeString "$STR"
 	done < <(cat "$1")
 }
 
 JavaReportLibrary "$JARFILE" "$TMPDIR/file1.jar.txt"
-if [ "$FLAG_CLASS" == "1" ] ; then
-	JavaReportLibrary "$CLASSFILE" "$TMPDIR/file1.class.txt"
-fi
-if [ "$FLAG_JSP" == "1" ] ; then
-	JavaReportLibrary "$JSPFILE" "$TMPDIR/file1.jsp.txt"
-fi
+if [ "$FLAG_CLASS" == "1" ] ; then JavaReportLibrary "$CLASSFILE" "$TMPDIR/file1.class.txt"; fi
+if [ "$FLAG_JSP" == "1" ] ; then JavaReportLibrary "$JSPFILE" "$TMPDIR/file1.jsp.txt"; fi
 
-line=$(StringLine "" "$LEN_FILE1")
-line=$line$(StringLine "" "$LEN_FILE2")
-line=$line$(StringLine "" "$LEN_MEMO")
-echo "$line+"
+makeString "-" "newline"; makeString "-"; makeString "-"
+printString
 
 exit 0
