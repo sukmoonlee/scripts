@@ -4,7 +4,7 @@ set +o posix
 ## Java Library Report Script
 ## 2020.11 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210413"
+SCRIPT_VERSION="20210428"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -12,8 +12,8 @@ HOSTNAME=$(hostname)
 TMPDIR="/dev/shm/java-library-report"
 if [ -d "$TMPDIR" ] ; then rm -rf "$TMPDIR"; fi # tmp code
 
-PROGRAM_FILE1=""
-PROGRAM_FILE2=""
+ORG_FILE=""
+NEW_FILE=""
 FLAG_ALL=0
 FLAG_CLASS=0
 FLAG_JSP=0
@@ -50,10 +50,10 @@ case "$1" in
 		shift 1
 		;;
 	*)
-		if [ "$PROGRAM_FILE1" == "" ] ; then
-			PROGRAM_FILE1="$1"
-		elif [ "$PROGRAM_FILE2" == "" ] ; then
-			PROGRAM_FILE2="$1"
+		if [ "$ORG_FILE" == "" ] ; then
+			ORG_FILE="$1"
+		elif [ "$NEW_FILE" == "" ] ; then
+			NEW_FILE="$1"
 		else
 			echo "unknown option: $1"
 			exit 1
@@ -63,16 +63,16 @@ case "$1" in
 esac
 done
 
-if [ "$PROGRAM_FILE1" == "" ] ; then
+if [ "$ORG_FILE" == "" ] ; then
 	echo "Usage: $0 [options]... [file]..."
 	exit 0
 fi
-if [ ! -f "$PROGRAM_FILE1" ] ; then
-	echo "'$PROGRAM_FILE1' is not found."
+if [ ! -f "$ORG_FILE" ] ; then
+	echo "'$ORG_FILE' is not found."
 	exit 1
 fi
-if [ "$PROGRAM_FILE2" != "" ] && [ ! -f "$PROGRAM_FILE2" ] ; then
-	echo "'$PROGRAM_FILE2' is not found."
+if [ "$NEW_FILE" != "" ] && [ ! -f "$NEW_FILE" ] ; then
+	echo "'$NEW_FILE' is not found."
 	exit 1
 fi
 ################################################################################
@@ -236,42 +236,54 @@ fi
 mkdir -p "$TMPDIR"
 if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR)"; exit 1; fi
 
-mkdir -p "$TMPDIR/file1/"
-if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR/file1/)"; exit 1; fi
-if [ "$PROGRAM_FILE2" != "" ] ; then
-	mkdir -p "$TMPDIR/file2/"
-	if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR/file2/)"; exit 1; fi
+mkdir -p "$TMPDIR/org/"
+if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR/org/)"; exit 1; fi
+if [ "$NEW_FILE" != "" ] ; then
+	mkdir -p "$TMPDIR/new/"
+	if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR/new/)"; exit 1; fi
 fi
 
-unzip "$PROGRAM_FILE1" -d "$TMPDIR/file1/" &> /dev/null
-if [ "$?" != "0" ] ; then echo "unzip error $PROGRAM_FILE1 ($?)"; exit 1; fi
-find "$TMPDIR/file1/" -type f -name "*.jar" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/file1.jar.txt"
-find "$TMPDIR/file1/" -type f -name "*.class" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/file1.class.txt"
-find "$TMPDIR/file1/" -type f -name "*.jsp" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/file1.jsp.txt"
+unzip "$ORG_FILE" -d "$TMPDIR/org/" &> /dev/null
+if [ "$?" != "0" ] ; then echo "unzip error $ORG_FILE ($?)"; exit 1; fi
+find "$TMPDIR/org/" -type f -name "*.jar" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.jar.txt"
+find "$TMPDIR/org/" -type f -name "*.class" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.class.txt"
+find "$TMPDIR/org/" -type f -name "*.jsp" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.jsp.txt"
+# shellcheck disable=SC2012
+if [ "$(ls -1 /dev/shm/java-library-report/org |wc -l)" == "1" ] ; then
+	ORG_BASE="$TMPDIR/org/$(ls -1 /dev/shm/java-library-report/org)"
+else
+	ORG_BASE="$TMPDIR/org"
+fi
 
-if [ "$PROGRAM_FILE2" != "" ] ; then
-	unzip "$PROGRAM_FILE2" -d "$TMPDIR/file2/" &> /dev/null
-	if [ "$?" != "0" ] ; then echo "unzip error $PROGRAM_FILE2 ($?)"; exit 1; fi
-	find "$TMPDIR/file2/" -type f -name "*.jar" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/file2.jar.txt"
-	find "$TMPDIR/file2/" -type f -name "*.class" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/file2.class.txt"
-	find "$TMPDIR/file2/" -type f -name "*.jsp" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/file2.jsp.txt"
+if [ "$NEW_FILE" != "" ] ; then
+	unzip "$NEW_FILE" -d "$TMPDIR/new/" &> /dev/null
+	if [ "$?" != "0" ] ; then echo "unzip error $NEW_FILE ($?)"; exit 1; fi
+	find "$TMPDIR/new/" -type f -name "*.jar" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.jar.txt"
+	find "$TMPDIR/new/" -type f -name "*.class" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.class.txt"
+	find "$TMPDIR/new/" -type f -name "*.jsp" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.jsp.txt"
+	# shellcheck disable=SC2012
+	if [ "$(ls -1 /dev/shm/java-library-report/new |wc -l)" == "1" ] ; then
+		NEW_BASE="$TMPDIR/new/$(ls -1 /dev/shm/java-library-report/new)"
+	else
+		NEW_BASE="$TMPDIR/new"
+	fi
 fi
 
 echo " Java Library Report Script ($HOSTNAME, $SCRIPT_VERSION, $BASH_VERSION)"
 echo ""
 
-if [ -f "$TMPDIR/file2/META-INF/MANIFEST.MF" ] ; then
+if [ "$NEW_FILE" != "" ] && [ -f "$NEW_BASE/META-INF/MANIFEST.MF" ] ; then
 	echo "# Archive Manifest Information"
 	makeString "-" "new"; makeString "-"
-	makeString "$PROGRAM_FILE1" "newline"
-	makeString "$PROGRAM_FILE2"
+	makeString "$ORG_FILE" "newline"
+	makeString "$NEW_FILE"
 	makeString "-" "newline"; makeString "-"
 
-	lineno=$(wc -l "$TMPDIR/file2/META-INF/MANIFEST.MF" |awk '{print $1}')
+	lineno=$(wc -l "$NEW_BASE/META-INF/MANIFEST.MF" |awk '{print $1}')
 	for ((i=1;i<=lineno;i++)); do
-		lastline1=$(sed -n "${i},${i}p" "$TMPDIR/file1/META-INF/MANIFEST.MF" |sed 's/\r//')
+		lastline1=$(sed -n "${i},${i}p" "$ORG_BASE/META-INF/MANIFEST.MF" |sed 's/\r//')
 		makeString "$lastline1" "newline"
-		lastline2=$(sed -n "${i},${i}p" "$TMPDIR/file2/META-INF/MANIFEST.MF" |sed 's/\r//')
+		lastline2=$(sed -n "${i},${i}p" "$NEW_BASE/META-INF/MANIFEST.MF" |sed 's/\r//')
 		makeString "$lastline2"
 		if [ "$lastline1" == "" ] && [ "$lastline2" == "" ] ; then continue; fi
 	done
@@ -279,15 +291,15 @@ if [ -f "$TMPDIR/file2/META-INF/MANIFEST.MF" ] ; then
 	makeString "-" "newline"; makeString "-"
 	printString
 	echo ""
-elif [ "$PROGRAM_FILE2" == "" ] && [ -f "$TMPDIR/file1/META-INF/MANIFEST.MF" ] ; then
+elif [ -f "$ORG_BASE/META-INF/MANIFEST.MF" ] ; then
 	echo "# Archive Manifest Information"
 	makeString "-" "new"
-	makeString "$PROGRAM_FILE1" "newline"
+	makeString "$ORG_FILE" "newline"
 	makeString "-" "newline"
 
-	lineno=$(wc -l "$TMPDIR/file1/META-INF/MANIFEST.MF" |awk '{print $1}')
+	lineno=$(wc -l "$ORG_BASE/META-INF/MANIFEST.MF" |awk '{print $1}')
 	for ((i=1;i<=lineno;i++)); do
-		lastline1=$(sed -n "${i},${i}p" "$TMPDIR/file1/META-INF/MANIFEST.MF" |sed 's/\r//')
+		lastline1=$(sed -n "${i},${i}p" "$ORG_BASE/META-INF/MANIFEST.MF" |sed 's/\r//')
 		makeString "$lastline1" "newline"
 		if [ "$lastline1" == "" ] ; then continue; fi
 	done
@@ -298,20 +310,10 @@ elif [ "$PROGRAM_FILE2" == "" ] && [ -f "$TMPDIR/file1/META-INF/MANIFEST.MF" ] ;
 fi
 
 echo "# Archive Library Information"
-if [ "$PROGRAM_FILE2" != "" ] ; then
-	JARFILE="$TMPDIR/file2.jar.txt"
-	CLASSFILE="$TMPDIR/file2.class.txt"
-	JSPFILE="$TMPDIR/file2.jsp.txt"
-else
-	JARFILE="$TMPDIR/file1.jar.txt"
-	CLASSFILE="$TMPDIR/file1.class.txt"
-	JSPFILE="$TMPDIR/file1.jsp.txt"
-fi
-
 makeString "-" "new"; makeString "-"; makeString "-"
-makeString "$PROGRAM_FILE1" "newline"
-if [ "$PROGRAM_FILE2" != "" ] ; then
-	makeString "$PROGRAM_FILE2"
+makeString "$ORG_FILE" "newline"
+if [ "$NEW_FILE" != "" ] ; then
+	makeString "$NEW_FILE"
 	makeString " Description "
 else
 	makeString " Size "
@@ -321,93 +323,108 @@ makeString "-" "newline"; makeString "-"; makeString "-"
 
 function JavaReportLibrary
 {
+	fn_org=$1
+	fn_new=$2
+
 	while IF=" " read fn chksum
 	do
-		fnbase=$(basename "$fn")
+		len=${#ORG_BASE}
+		org_filename=${fn:$len}
+		new_filename=
 
-		if [ "$PROGRAM_FILE2" == "" ] ; then
-			DIR="$TMPDIR/file1/"
-			len=${#DIR}
-			pfilename1=${fn:$len}
-			FN_SIZE=$(GetFileSize "$fn")
+		if [ "$NEW_FILE" == "" ] ; then
+			fn_size=$(GetFileSize "$fn")
 
-			makeString "$pfilename1" "newline"
-			makeString "$FN_SIZE" "" "right"
+			makeString "$org_filename" "newline"
+			makeString "$fn_size" "" "right"
 			makeString "$chksum"
 			continue
 		fi
 
-		FLAG=0
-		fnold=
-		while IF=" " read a b
-		do
-			fnbase2=$(basename "$a")
-			if [ "$fnbase" == "$fnbase2" ] ; then
-				fnold=$a
-				if [ "$chksum" == "$b" ] ; then
-					FLAG=1
-				else
-					FLAG=2
-				fi
-			fi
-		done < <(grep "$fnbase" "$2")
-
-		if [ "$FLAG_ALL" == "0" ] && [ "$FLAG" == "1" ] ; then continue; fi
-
-		if [ "$fnold" != "" ] ; then
-			DIR="$TMPDIR/file1/"
-			len=${#DIR}
-			pfilename1=${fnold:$len}
+		_flag=0
+		new_chksum=$(grep "$org_filename" "$fn_new"|awk '{print $2}')
+		if [ "$chksum" == "$new_chksum" ] ; then
+			_flag=1
+			_str="SAME(=)"
 		else
-			DIR="$TMPDIR/file2/"
-			len=${#DIR}
-			pfilename0=${fn:$len}
-			rver=$(echo "$pfilename0" |awk -F- '{print $NF}')
-			len=$((${#pfilename0}-${#rver}))
-			rname=${pfilename0:0:$len}
+			chksum_cnt=$(grep -c "$org_filename" "$fn_new")
+			if [ "$chksum_cnt" == "1" ] ; then
+				_flag=2
+				_str="MODIFY(*)"
+			fi
+		fi
 
-			lfile=$(grep "$rname" "$2" |sort |head -1)
+		if [ "$FLAG_ALL" == "0" ] && [ "$_flag" == "1" ] ; then continue; fi
+		if [ "$_flag" == "1" ] || [ "$_flag" == "2" ] ; then
+			makeString "$org_filename" "newline"
+			makeString "$org_filename"
+			makeString " $_str"
+			continue
+		fi
+
+		filename=$(basename "$fn")
+		rver=$(echo "$filename" |awk -F- '{print $NF}')
+		len=$((${#filename}-${#rver}))
+		rname=${filename:0:$len}
+		re='^[0-9]+$'
+		if [ "$rname" != "" ] && [[ ${rver:0:1} =~ $re ]] ; then
+			len=$((${#org_filename}-${#filename}))
+			dirname=${org_filename:0:$len}
+
+			lfile=$(grep "$dirname$rname" "$fn_new" |sort |head -1)
 			if [ "$lfile" != "" ] ; then
-				FLAG=3
-				DIR="$TMPDIR/file1/"
-				len=${#DIR}
+				_flag=3
+				len=${#NEW_BASE}
 				fnold=$(echo "$lfile" |awk '{print $1}')
-				pfilename1=${fnold:$len}
-			else
-				pfilename1=
-			fi
-		fi
-		DIR="$TMPDIR/file2/"
-		len=${#DIR}
-		pfilename2=${fn:$len}
-
-		STR=
-		if [ "$FLAG" == "0" ] ; then
-			STR="NEW(+)"
-		elif [ "$FLAG" == "1" ] ; then
-			STR="SAME(=)"
-		elif [ "$FLAG" == "2" ] ; then
-			STR="MODIFY(*)"
-		elif [ "$FLAG" == "3" ] ; then
-			STR=$(VerDiff "$pfilename1" "$pfilename2")
-			if [ "$STR" == "upgrade" ] ; then
-				STR="REPLACE(>)"
-			else
-				STR="REPLACE(<)"
+				new_filename=${fnold:$len}
 			fi
 		fi
 
-		makeString "$pfilename1" "newline"
-		makeString "$pfilename2"
-		makeString "$STR"
-	done < <(cat "$1")
+		_str=
+		if [ "$_flag" == "0" ] ; then
+			_str="REMOVE(-)"
+		elif [ "$_flag" == "3" ] ; then
+			_str=$(VerDiff "$org_filename" "$new_filename")
+			if [ "$_str" == "upgrade" ] ; then
+				_str="UPGRADE(<)"
+			else
+				_str="DOWNGRADE(>) "
+			fi
+		fi
+
+		makeString "$org_filename" "newline"
+		makeString "$new_filename"
+		makeString " $_str"
+	done < <(cat "$fn_org")
+
+	if [ "$NEW_FILE" == "" ] ; then return; fi
+	while IF=" " read fn chksum
+	do
+		len=${#NEW_BASE}
+		new_filename=${fn:$len}
+
+		chksum_cnt=$(grep -c "$new_filename" "$fn_org")
+		if [ "$chksum_cnt" == "1" ] ; then continue; fi
+
+		filename=$(basename "$fn")
+		rver=$(echo "$filename" |awk -F- '{print $NF}')
+		len=$((${#filename}-${#rver}))
+		rname=${filename:0:$len}
+		if [ "$rname" != "" ] ; then
+			lfile=$(grep "$dirname$rname" "$fn_org" |sort |head -1)
+			if [ "$lfile" != "" ] ; then continue; fi
+		fi
+
+		makeString "" "newline"
+		makeString "$new_filename"
+		makeString " NEW(+) "
+	done < <(cat "$fn_new")
 }
 
-JavaReportLibrary "$JARFILE" "$TMPDIR/file1.jar.txt"
-if [ "$FLAG_CLASS" == "1" ] ; then JavaReportLibrary "$CLASSFILE" "$TMPDIR/file1.class.txt"; fi
-if [ "$FLAG_JSP" == "1" ] ; then JavaReportLibrary "$JSPFILE" "$TMPDIR/file1.jsp.txt"; fi
+JavaReportLibrary "$TMPDIR/org.jar.txt" "$TMPDIR/new.jar.txt"
+if [ "$FLAG_CLASS" == "1" ] ; then JavaReportLibrary "$TMPDIR/org.class.txt" "$TMPDIR/new.class.txt"; fi
+if [ "$FLAG_JSP" == "1" ] ; then JavaReportLibrary "$TMPDIR/org.jsp.txt" "$TMPDIR/new.jsp.txt"; fi
 
 makeString "-" "newline"; makeString "-"; makeString "-"
 printString
-
 exit 0
