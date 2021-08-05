@@ -12,52 +12,92 @@
 
 ## 사용법
  * 아래와 같이 cert_check.sh 에 파라메터를 입력하여 수행
-<pre><code>
-$ git clone https://github.com/sukmoonlee/scripts.git
+<pre><code>$ git clone https://github.com/sukmoonlee/scripts.git
 $ cd scripts/cert/
-$ ./cert_check.sh www.naver.com:443
-Certification Check Script (home, 20200915, 4.2.46(2)-release)
+$ bash ./cert_check.sh www.naver.com:443
+Certification Check Script (home, 20210525, 4.2.46(2)-release, OpenSSL 1.1.1g FIPS  21 Apr 2020)
 
 Check URL - www.naver.com:443
     issuer=C = US, O = DigiCert Inc, CN = DigiCert SHA2 Secure Server CA
+    subject=C = KR, ST = Gyeonggi-do, L = Seongnam-si, O = NAVER Corp., CN = *.www.naver.com
     notBefore=May 30 00:00:00 2020 GMT
     notAfter=Jun  8 12:00:00 2022 GMT
     SHA1 Fingerprint=FE:5B:A9:4A:1F:56:F2:60:F2:DD:34:D2:55:B3:D1:C5:EF:13:2C:0F
 
 Report Protocol
-    +------------+----------------------------------+------------+
-    | Protocol   | Cipher                           | Support    |
-    +------------+----------------------------------+------------+
-    | TLSv1      | ECDHE-RSA-AES128-SHA             | O          |
-    | TLSv1.1    | ECDHE-RSA-AES128-SHA             | O          |
-    | TLSv1.2    | ECDHE-RSA-AES128-GCM-SHA256      | O          |
-    | TLSv1.3    | TLS_AES_256_GCM_SHA384           | O          |
-    | ssl3       |                                  | X          |
-    | dtls1      |                                  | X          |
-    | dtls1_2    |                                  | X          |
-    +------------+----------------------------------+------------+
+    +----------+-------+-----------------------------+
+    | Protocol | allow | Cipher                      |
+    +----------+-------+-----------------------------+
+    | TLSv1    |   O   | ECDHE-RSA-AES128-SHA        |
+    | TLSv1.1  |   O   | ECDHE-RSA-AES128-SHA        |
+    | TLSv1.2  |   O   | ECDHE-RSA-AES128-GCM-SHA256 |
+    | TLSv1.3  |   O   | TLS_AES_256_GCM_SHA384      |
+    | ssl3     |   X   |                             |
+    | dtls1    |   X   |                             |
+    | dtls1_2  |   X   |                             |
+    +----------+-------+-----------------------------+
 </code></pre>
 
  * 파라메터가 없는 경우에 로컬 시스템 점검
-<pre><code>
-$ ./cert_check.sh
-Certification Check Script (gcloud, 20200915, 4.2.46(2)-release)
+<pre><code>$ sudo bash cert_check.sh
+Certification Check Script (home, 20210525, 4.2.46(2)-release, OpenSSL 1.1.1g FIPS  21 Apr 2020)
 
-+-----------------+------------------+-------------------------------------------+
-| Local Address   | PID/Program name | Certification Information (KST +0900)     |
-+-----------------+------------------+-------------------------------------------+
-| 127.0.0.1:443   | -                | 2020-08-30 23:21:15 ~ 2020-11-28 23:21:15 |  /C=US/O=Let's Encrypt/CN=Let's Encrypt Authority X3
-+-----------------+------------------+-------------------------------------------+
++---------------+----------------+-------------+-------------------------------------------+
+| Listen Socket | Test Socket    | PID/Program | Certification Information (KST +0900)     |
++---------------+----------------+-------------+-------------------------------------------+
+| 0.0.0.0:22    | 127.0.0.1:22   | 894/sshd    |                                           |
+| 0.0.0.0:443   | 127.0.0.1:443  | 6752/httpd  | 2021-06-17 21:37:17 ~ 2021-09-15 21:37:16 | >>> C = US, O = Let's Encrypt, CN = R3
+| 0.0.0.0:80    | 127.0.0.1:80   | 6752/httpd  |                                           |
++---------------+----------------+-------------+-------------------------------------------+
 
+Check URL - 127.0.0.1:443
+    issuer=C = US, O = Let's Encrypt, CN = R3
+    subject=CN = home.sukmoonlee.com
+    notBefore=Jun 17 12:37:17 2021 GMT
+    notAfter=Sep 15 12:37:16 2021 GMT
+    SHA1 Fingerprint=B0:97:CB:72:EA:CC:5D:70:37:C4:77:FF:C6:BF:FF:AB:99:5F:6E:C8
 
-$ sudo ./cert_check.sh -a
-Certification Check Script (gcloud, 20200915, 4.2.46(2)-release)
+Report Protocol
+    +----------+-------+-----------------------------+
+    | Protocol | allow | Cipher                      |
+    +----------+-------+-----------------------------+
+    | TLSv1    |   X   | 0000                        |
+    | TLSv1.1  |   X   | 0000                        |
+    | TLSv1.2  |   O   | ECDHE-RSA-AES256-GCM-SHA384 |
+    | tls1_3   |   X   |                             |
+    | ssl3     |   X   |                             |
+    | DTLSv1   |   X   | 0000                        |
+    | DTLSv1.2 |   X   | 0000                        |
+    +----------+-------+-----------------------------+
+</code></pre>
+ 
+ * 로컬 시스템에서 사용 중인 TLS 포트만 확인하는 경우 (-r 옵션 사용)
+<pre><code>$ sudo bash cert_check.sh -r
+Certification Check Script (home, 20210525, 4.2.46(2)-release, OpenSSL 1.1.1g FIPS  21 Apr 2020)
 
-+-----------------+------------------+-------------------------------------------+
-| Local Address   | PID/Program name | Certification Information (KST +0900)     |
-+-----------------+------------------+-------------------------------------------+
-| 127.0.0.1:22    | 12870/sshd       |                                           |
-| 127.0.0.1:80    | 4049/httpd       |                                           |
-| 127.0.0.1:443   | 4049/httpd       | 2020-08-30 23:21:15 ~ 2020-11-28 23:21:15 |  /C=US/O=Let's Encrypt/CN=Let's Encrypt Authority X3
-+-----------------+------------------+-------------------------------------------+
++---------------+---------------+-------------+-------------------------------------------+
+| Listen Socket | Test Socket   | PID/Program | Certification Information (KST +0900)     |
++---------------+---------------+-------------+-------------------------------------------+
+| 0.0.0.0:443   | 127.0.0.1:443 | 6752/httpd  | 2021-06-17 21:37:17 ~ 2021-09-15 21:37:16 | >>> C = US, O = Let's Encrypt, CN = R3
++---------------+---------------+-------------+-------------------------------------------+
+
+Check URL - 127.0.0.1:443
+    issuer=C = US, O = Let's Encrypt, CN = R3
+    subject=CN = home.sukmoonlee.com
+    notBefore=Jun 17 12:37:17 2021 GMT
+    notAfter=Sep 15 12:37:16 2021 GMT
+    SHA1 Fingerprint=B0:97:CB:72:EA:CC:5D:70:37:C4:77:FF:C6:BF:FF:AB:99:5F:6E:C8
+
+Report Protocol
+    +----------+-------+-----------------------------+
+    | Protocol | allow | Cipher                      |
+    +----------+-------+-----------------------------+
+    | TLSv1    |   X   | 0000                        |
+    | TLSv1.1  |   X   | 0000                        |
+    | TLSv1.2  |   O   | ECDHE-RSA-AES256-GCM-SHA384 |
+    | tls1_3   |   X   |                             |
+    | ssl3     |   X   |                             |
+    | DTLSv1   |   X   | 0000                        |
+    | DTLSv1.2 |   X   | 0000                        |
+    +----------+-------+-----------------------------+
 </code></pre>
