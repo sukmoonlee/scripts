@@ -4,7 +4,7 @@ set +o posix
 ## Process Library Report Script
 ## 2019.02 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210401"
+SCRIPT_VERSION="20210805"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -257,11 +257,12 @@ function GetFileDate
 {
 	local file="$1"
 	if [ "$file" == "" ] ; then return; fi
-	if [ "$FLAG_SAVE" != "2" ] ; then
+	if [ "$FLAG_SAVE" != "2" ] && [ -f "$file" ] ; then
 		exec_cmd "$PG_ls --full-time $file"
 	fi
 
 	_s=$(getStartCmdNo "ls --full-time $file")
+	if [ "$_s" == "0" ] ; then echo ""; return; fi
 	_e=$(getEndCmdNo "$_s")
 	sed -n "$((_s+1)),$((_e-1))p" "$FN_INPUT" |awk '{print $6,substr($7,0,8)}'
 }
@@ -269,11 +270,12 @@ function GetFileSize
 {
 	local file="$1"
 	if [ "$file" == "" ] ; then return; fi
-	if [ "$FLAG_SAVE" != "2" ] ; then
+	if [ "$FLAG_SAVE" != "2" ] && [ -f "$file" ] ; then
 		exec_cmd "$PG_ls -l $file"
 	fi
 
 	_s=$(getStartCmdNo "ls -l $file")
+	if [ "$_s" == "0" ] ; then echo ""; return; fi
 	_e=$(getEndCmdNo "$_s")
 	sed -n "$((_s+1)),$((_e-1))p" "$FN_INPUT" | awk '{print $5}'
 }
@@ -281,18 +283,20 @@ function GetFileMd5
 {
 	local file="$1"
 	if [ "$file" == "" ] ; then return; fi
-	if [ "$FLAG_SAVE" != "2" ] ; then
+	if [ "$FLAG_SAVE" != "2" ] && [ -f "$file" ] ; then
 		exec_cmd "$PG_md5sum $file"
 		exec_cmd "$PG_rpm -qf $file"
 	fi
 
 	if [ "$FLAG_RPM" == "1" ] ; then
 		_s=$(getStartCmdNo "rpm -qf $file")
+		if [ "$_s" == "0" ] ; then echo ""; return; fi
 		_e=$(getEndCmdNo "$_s")
 		rpm=$(sed -n "$((_s+1)),$((_e-1))p" "$FN_INPUT" | awk '{print $1}')
 		if [ "$rpm" == "file" ] ; then echo ""; else echo "$rpm"; fi
 	else
 		_s=$(getStartCmdNo "md5sum $file")
+		if [ "$_s" == "0" ] ; then echo ""; return; fi
 		_e=$(getEndCmdNo "$_s")
 		sed -n "$((_s+1)),$((_e-1))p" "$FN_INPUT" | awk '{print $1}'
 	fi
@@ -301,11 +305,12 @@ function GetFileCheck
 {
 	local file="$1"
 	if [ "$file" == "" ] ; then return; fi
-	if [ "$FLAG_SAVE" != "2" ] ; then
+	if [ "$FLAG_SAVE" != "2" ] && [ -f "$file" ] ; then
 		exec_cmd "$PG_file $file"
 	fi
 
 	_s=$(getStartCmdNo "file $file")
+	if [ "$_s" == "0" ] ; then echo "0"; return; fi
 	_e=$(getEndCmdNo "$_s")
 	sed -n "$((_s+1)),$((_e-1))p" "$FN_INPUT" | egrep -c "ELF|Zip archive"
 }
