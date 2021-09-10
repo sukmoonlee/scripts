@@ -3,7 +3,7 @@
 ## Program Certfication 추출 스크립트
 ## 2019.01 created by CoreSolution (smlee@sk.com)
 ################################################################################
-SCRIPT_VERSION="20190321"
+SCRIPT_VERSION="20210825"
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
 OS=$(uname -s)
@@ -48,7 +48,9 @@ fi
 function GetProgram
 {
 	local pid=$1
-	local name=$(sudo $PG_LSOF -np "$pid" |head |grep ' txt ' | awk '{print $NF}')
+	local name=
+
+	name=$(sudo $PG_LSOF -np "$pid" |head |grep ' txt ' | awk '{print $NF}')
 	if [ "${name:0:6}" == "/proc/" ] ; then
 		echo ""
 	elif [ "$name" == "(deleted)" ] ; then
@@ -62,14 +64,17 @@ function GetProgram
 function GetShortName
 {
 	local fullname=$1
-	local name=$($PG_BASENAME "$1")
+	local name=
+
+	name==$($PG_BASENAME "$1")
 	echo "$name"
 }
 function CheckLibrary
 {
 	local pid=$1
+	local chk=
 
-	local chk=$(sudo $PG_LSOF -np "$pid" |egrep ' mem | DEL ' | egrep "/libssl|/libssl3|/libcrypto|jsse.jar" | head)
+	chk=$(sudo $PG_LSOF -np "$pid" |egrep ' mem | DEL ' | egrep "/libssl|/libssl3|/libcrypto|jsse.jar" | head)
 	if [ "$chk" != "" ] ; then
 		echo "O"
 	else
@@ -79,12 +84,14 @@ function CheckLibrary
 function CheckFunction
 {
 	local fullname=$1
+	local chk=
 
 	if [ "$PG_READELF" == "" ] ; then
 		echo "O"
 		return
 	fi
-	local chk=$(sudo $PG_READELF -sW "$fullname" | egrep -i "SSL_use_certificate|SSL_CTX_use_certificate|SSL_use_PrivateKey|gnutls_certificate_set_x509_trust_file|mbedtls_x509_crt_parse" | head)
+
+	chk=$(sudo $PG_READELF -sW "$fullname" | egrep -i "SSL_use_certificate|SSL_CTX_use_certificate|SSL_use_PrivateKey|gnutls_certificate_set_x509_trust_file|mbedtls_x509_crt_parse" | head)
 	if [ "$chk" != "" ] ; then
 		echo "O"
 	else
@@ -94,11 +101,13 @@ function CheckFunction
 function GetDisplayName
 {
 	local pid=$1
+	local name=
+
 	if [ "$OS" == "SunOS" ] ; then
-		local name=$(ps -o comm -p "$pid" |tail -1)
-		return
+		name=$(ps -o comm -p "$pid" |tail -1)
+	else
+		name=$(ps -o cmd --pid "$pid" |tail -1)
 	fi
-	local name=$(ps -o cmd --pid "$pid" |tail -1)
 	echo "$name"
 }
 ################################################################################

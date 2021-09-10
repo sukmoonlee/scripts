@@ -4,7 +4,7 @@ set +o posix
 ## Program Library Report Script
 ## 2019.02 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210329"
+SCRIPT_VERSION="20210823"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -14,17 +14,9 @@ FLAG_ALL=0
 FLAG_RPM=0
 FLAG_TAR=0
 FN_INPUT=
-
+FLAG_ANSI=0
 while [ "$#" -gt 0 ] ; do
 case "$1" in
-	-v|--version)
-		echo "$0 $SCRIPT_VERSION"
-		exit 0
-		;;
-	-d|--debug)
-		set -x
-		shift 1
-		;;
 	-a|--all)
 		FLAG_ALL=1
 		shift 1
@@ -51,6 +43,22 @@ case "$1" in
 		;;
 	-t|--tar)
 		FLAG_TAR=1
+		shift 1
+		;;
+	--ansi)
+		FLAG_ANSI=1
+		shift 1
+		;;
+	--no-ansi)
+		FLAG_ANSI=0
+		shift 1
+		;;
+	-v|--version)
+		echo "$0 $SCRIPT_VERSION"
+		exit 0
+		;;
+	-d|--debug)
+		set -x
 		shift 1
 		;;
 	-h|--help)
@@ -137,22 +145,20 @@ function _stringCat
 	local align="$3"
 
 	local len_name=${#name}
+	if [ "$FLAG_ANSI" == "1" ] ; then
+		_str=$(echo "$name" |sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g"|sed 's/(B//g')
+		len_name=${#_str}
+	fi
 	local cnt_space=$((len-len_name))
 	local RST="|$name"
 
-	if [ "$align" == "right" ] ; then
-		RST="|"
-	fi
-
+	if [ "$align" == "right" ] ; then RST="|"; fi
 	for ((i=0; i<cnt_space; i++))
 	do
 		RST="$RST "
 	done
 
-	if [ "$align" == "right" ] ; then
-		RST="$RST$name"
-	fi
-
+	if [ "$align" == "right" ] ; then RST="$RST$name"; fi
 	echo "$RST"
 }
 function _stringLine
@@ -198,6 +204,10 @@ function printString
 				SLEN[$_col_cnt]=0
 			fi
 			local _len=${#_col}
+			if [ "$FLAG_ANSI" == "1" ] ; then
+				_col=$(echo "${_col}" |sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g"|sed 's/(B//g')
+				_len=${#_col}
+			fi
 			if [ "${_col:$((_len-2)):2}" == "~R" ] ; then
 				_len=$((_len-2))
 			fi
@@ -219,10 +229,21 @@ function printString
 				_last_flag=1
 			else
 				local _len=${#_col}
-				if [ "${_col:$((_len-2)):2}" == "~R" ] ; then
-					_line=$_line$(_stringCat "${_col:0:$((_len-2))}" "${SLEN[$_col_cnt]}" "right")
+
+				if [ "$FLAG_ANSI" == "1" ] ; then
+					_str=$(echo "${_col}" |sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g"|sed 's/(B//g')
+					_len=${#_str}
+					if [ "${_str:$((_len-2)):2}" == "~R" ] ; then
+						_line=$_line$(_stringCat "${_col/~R/}" "${SLEN[$_col_cnt]}" "right")
+					else
+						_line=$_line$(_stringCat "$_col" "${SLEN[$_col_cnt]}")
+					fi
 				else
-					_line=$_line$(_stringCat "$_col" "${SLEN[$_col_cnt]}")
+					if [ "${_col:$((_len-2)):2}" == "~R" ] ; then
+						_line=$_line$(_stringCat "${_col:0:$((_len-2))}" "${SLEN[$_col_cnt]}" "right")
+					else
+						_line=$_line$(_stringCat "$_col" "${SLEN[$_col_cnt]}")
+					fi
 				fi
 				_last_flag=0
 				if [ "${_col:0:4}" == " >>>" ] ; then _last_flag=2; fi

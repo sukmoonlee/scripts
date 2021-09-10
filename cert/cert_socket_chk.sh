@@ -6,28 +6,28 @@
 ## 2019.02.13 FIX. don't exit even if CERT has no CN
 ## 2019.02.13 FIX. netstat on CentOS6 has no tcp6 in proto (address translation combined)
 ################################################################################
-SCRIPT_VERSION="20190402"
+SCRIPT_VERSION="20210825"
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
 OS=$(uname -s)
 
-if [ -f "/bin/netstat" ] ; then PG_NETSTAT="/bin/netstat";
-elif [ -f "/usr/bin/netstat" ] ; then PG_NETSTAT="/usr/bin/netstat";
+if [ -f "/bin/netstat" ] ; then PG_NETSTAT="/bin/netstat"
+elif [ -f "/usr/bin/netstat" ] ; then PG_NETSTAT="/usr/bin/netstat"
 else echo "Error - Command not found 'netstat'"; exit 1; fi
-if [ -f "/usr/bin/ggrep" ] ; then PG_GREP="/usr/bin/ggrep";
-elif [ -f "/usr/sfw/bin/ggrep" ] ; then PG_GREP="/usr/sfw/bin/ggrep";
-elif [ -f "/usr/bin/grep" ] ; then PG_GREP="/usr/bin/grep";
-elif [ -f "/bin/grep" ] ; then PG_GREP="/bin/grep";
+if [ -f "/usr/bin/ggrep" ] ; then PG_GREP="/usr/bin/ggrep"
+elif [ -f "/usr/sfw/bin/ggrep" ] ; then PG_GREP="/usr/sfw/bin/ggrep"
+elif [ -f "/usr/bin/grep" ] ; then PG_GREP="/usr/bin/grep"
+elif [ -f "/bin/grep" ] ; then PG_GREP="/bin/grep"
 else echo "Error - Command not found 'grep'"; exit 1; fi
-if [ -f "/bin/rm" ] ; then PG_DELETE="/bin/rm";
-elif [ -f "/usr/bin/rm" ] ; then PG_DELETE="/usr/bin/rm";
+if [ -f "/bin/rm" ] ; then PG_DELETE="/bin/rm"
+elif [ -f "/usr/bin/rm" ] ; then PG_DELETE="/usr/bin/rm"
 else echo "Error - Command not found 'rm'"; exit 1; fi
 if [ -f "/usr/bin/openssl" ] ; then PG_OPENSSL="/usr/bin/openssl"
 elif [ -f "/usr/local/bin/openssl" ] ; then PG_OPENSSL="/usr/local/bin/openssl"
 else echo "Error - Command not found 'openssl'"; exit 1; fi
-if [ -f "/bin/timeout" ] ; then PG_TIMEOUT="/bin/timeout";
-elif [ -f "/usr/bin/timeout" ] ; then PG_TIMEOUT="/usr/bin/timeout";
-elif [ -f "/usr/share/doc/bash-3.2/scripts/timeout" ] ; then PG_TIMEOUT="bash /usr/share/doc/bash-3.2/scripts/timeout";
+if [ -f "/bin/timeout" ] ; then PG_TIMEOUT="/bin/timeout"
+elif [ -f "/usr/bin/timeout" ] ; then PG_TIMEOUT="/usr/bin/timeout"
+elif [ -f "/usr/share/doc/bash-3.2/scripts/timeout" ] ; then PG_TIMEOUT="bash /usr/share/doc/bash-3.2/scripts/timeout"
 else echo "Error - Command not found 'timeout'"; exit 1; fi
 #else PG_TIMEOUT=; fi
 ################################################################################
@@ -117,12 +117,13 @@ function GetCertDigest
 }
 function GetCertPid
 {
+	local str=
+
 	if [ "$OS" == "SunOS" ] ; then
-		local str=$(sudo $PG_NETSTAT -nua -P tcp |$PG_GREP LISTEN |$PG_GREP "$1 " | awk '{print $4}'|awk 'BEGIN { FS="/" } {print $1}')
-		echo "$str"
-		return
+		str=$(sudo $PG_NETSTAT -nua -P tcp |$PG_GREP LISTEN |$PG_GREP "$1 " | awk '{print $4}'|awk 'BEGIN { FS="/" } {print $1}')
+	else
+		str=$(sudo $PG_NETSTAT -nap |$PG_GREP LISTEN |$PG_GREP "$1 " | awk '{print $7}'|awk 'BEGIN { FS="/" } {print $1}')
 	fi
-	local str=$(sudo $PG_NETSTAT -nap |$PG_GREP LISTEN |$PG_GREP "$1 " | awk '{print $7}'|awk 'BEGIN { FS="/" } {print $1}')
 	echo "$str"
 }
 ################################################################################
@@ -130,7 +131,7 @@ NR=${#TCPDESTADDR[*]}
 for ((i=0;i<NR;i++))
 do
 	if [ -z "$PG_TIMEOUT" ] ; then
-		$PG_OPENSSL s_client -connect ${TCPDESTADDR[$i]} -showcerts &> "$TMPFILE" &
+		$PG_OPENSSL s_client -connect "${TCPDESTADDR[$i]}" -showcerts &> "$TMPFILE" &
 		OPENSSLPID=$!
 		#ps -ef |grep "$OPENSSLPID"
 		sleep  5
@@ -140,11 +141,11 @@ do
 		do
 			if [ "$pidline" == "$OPENSSLPID" ] ; then
 				#echo "kill $OPENSSLPID"
-				kill "$OPENSSLPID";
+				kill "$OPENSSLPID"
 			 fi
 		done
 	else
-		$PG_TIMEOUT 1 $PG_OPENSSL s_client -connect ${TCPDESTADDR[$i]} -showcerts &> "$TMPFILE"
+		$PG_TIMEOUT 1 $PG_OPENSSL s_client -connect "${TCPDESTADDR[$i]}" -showcerts &> "$TMPFILE"
 	fi
 	if [ ! -s "$TMPFILE" ]; then continue; fi
 

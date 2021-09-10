@@ -4,7 +4,7 @@ set +o posix
 ## Java Library Report Script
 ## 2020.11 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210428"
+SCRIPT_VERSION="20210823"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -17,14 +17,19 @@ NEW_FILE=""
 FLAG_ALL=0
 FLAG_CLASS=0
 FLAG_JSP=0
+FLAG_ANSI=0
 while [ "$#" -gt 0 ] ; do
 case "$1" in
-	-v|--version)
-		echo "$0 $SCRIPT_VERSION"
-		exit 0
+	-a|--all)
+		FLAG_ALL=1
+		shift 1
 		;;
-	-d|--debug)
-		set -x
+	-c|--class)
+		FLAG_CLASS=1
+		shift 1
+		;;
+	-j|--jsp)
+		FLAG_JSP=1
 		shift 1
 		;;
 	-p|--path)
@@ -37,16 +42,20 @@ case "$1" in
 		fi
 		shift 1
 		;;
-	-a|--all)
-		FLAG_ALL=1
+	--ansi)
+		FLAG_ANSI=1
 		shift 1
 		;;
-	-c|--class)
-		FLAG_CLASS=1
+	--no-ansi)
+		FLAG_ANSI=0
 		shift 1
 		;;
-	-j|--jsp)
-		FLAG_JSP=1
+	-v|--version)
+		echo "$0 $SCRIPT_VERSION"
+		exit 0
+		;;
+	-d|--debug)
+		set -x
 		shift 1
 		;;
 	*)
@@ -83,6 +92,10 @@ function _stringCat
 	local align="$3"
 
 	local len_name=${#name}
+	if [ "$FLAG_ANSI" == "1" ] ; then
+		_str=$(echo "$name" |sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g"|sed 's/(B//g')
+		len_name=${#_str}
+	fi
 	local cnt_space=$((len-len_name))
 	local RST="|$name"
 
@@ -137,6 +150,10 @@ function printString
 				SLEN[$_col_cnt]=0
 			fi
 			local _len=${#_col}
+			if [ "$FLAG_ANSI" == "1" ] ; then
+				_col=$(echo "${_col}" |sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g"|sed 's/(B//g')
+				_len=${#_col}
+			fi
 			if [ "${_col:$((_len-2)):2}" == "~R" ] ; then
 				_len=$((_len-2))
 			fi
@@ -158,10 +175,21 @@ function printString
 				_last_flag=1
 			else
 				local _len=${#_col}
-				if [ "${_col:$((_len-2)):2}" == "~R" ] ; then
-					_line=$_line$(_stringCat "${_col:0:$((_len-2))}" "${SLEN[$_col_cnt]}" "right")
+
+				if [ "$FLAG_ANSI" == "1" ] ; then
+					_str=$(echo "${_col}" |sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g"|sed 's/(B//g')
+					_len=${#_str}
+					if [ "${_str:$((_len-2)):2}" == "~R" ] ; then
+						_line=$_line$(_stringCat "${_col/~R/}" "${SLEN[$_col_cnt]}" "right")
+					else
+						_line=$_line$(_stringCat "$_col" "${SLEN[$_col_cnt]}")
+					fi
 				else
-					_line=$_line$(_stringCat "$_col" "${SLEN[$_col_cnt]}")
+					if [ "${_col:$((_len-2)):2}" == "~R" ] ; then
+						_line=$_line$(_stringCat "${_col:0:$((_len-2))}" "${SLEN[$_col_cnt]}" "right")
+					else
+						_line=$_line$(_stringCat "$_col" "${SLEN[$_col_cnt]}")
+					fi
 				fi
 				_last_flag=0
 				if [ "${_col:0:4}" == " >>>" ] ; then _last_flag=2; fi
@@ -388,7 +416,11 @@ function JavaReportLibrary
 			if [ "$_str" == "upgrade" ] ; then
 				_str="UPGRADE(<)"
 			else
-				_str="DOWNGRADE(>) "
+				if [ "$FLAG_ANSI" == "1" ] ; then
+					_str="$(tput setaf 1)DOWNGRADE(>)$(tput sgr0) "
+				else
+					_str="DOWNGRADE(>) "
+				fi
 			fi
 		fi
 

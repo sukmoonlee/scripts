@@ -3,7 +3,7 @@
 ## Certfication Report Script
 ## 2019.02 created by CoreSolution (smlee@sk.com)
 ################################################################################
-SCRIPT_VERSION="20200423"
+SCRIPT_VERSION="20210825"
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
 FLAG_PROGRAM=0
@@ -61,7 +61,7 @@ done
 ################################################################################
 FLAG_ECHO=1
 if [ -f "/etc/wrs-release" ] ; then FLAG_ECHO=0; fi
-if [ -f "/etc/init.d/functions" ]; then
+if [ -r "/etc/init.d/functions" ]; then
 	. /etc/init.d/functions
 	if [ "$BOOTUP" = "serial" ] ; then FLAG_ECHO=0; fi
 fi
@@ -157,7 +157,7 @@ if [ "$FLAG_ALL" == "1" ] ; then
 	cat file.txt
 fi
 
-if [ -f "/usr/bin/rm" ] ; then /usr/bin/rm -f program.txt socket.txt file.txt;
+if [ -f "/usr/bin/rm" ] ; then /usr/bin/rm -f program.txt socket.txt file.txt
 elif [ -f "/bin/rm" ] ; then /bin/rm -f program.txt socket.txt file.txt; fi
 
 exit 0
