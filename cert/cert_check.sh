@@ -4,7 +4,7 @@ set +o posix
 # Certfication Check Script
 # 2020.12.26 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210823"
+SCRIPT_VERSION="20211109"
 LC_ALL=en_US.UTF-8
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -19,7 +19,8 @@ elif [ -f "/usr/share/doc/bash-3.2/scripts/timeout" ] ; then PG_TIMEOUT="bash /u
 else echo "Error - Command not found 'timeout'"; exit 1; fi
 if [ -f "/usr/bin/netstat" ] ; then PG_NETSTAT="/usr/bin/netstat"
 elif [ -f "/bin/netstat" ] ; then PG_NETSTAT="/bin/netstat"
-else echo "Error - Command not found 'netstat'"; exit 1; fi
+elif [ -f "/usr/sbin/ss" ] ; then PG_SS="/usr/sbin/ss"
+else echo "Error - Command not found 'netstat' or 'ss'"; exit 1; fi
 ################################################################################
 function Usage
 {
@@ -297,7 +298,11 @@ makeString " PID/Program "
 makeString " Certification Information ($(date +%Z\ %z)) "
 makeString "-" "newline"; makeString "-"; makeString "-"; makeString "-"
 
-pplist=$($PG_NETSTAT -nap 2>/dev/null |grep ^tcp |grep LISTEN|sort -n)
+if [ "$PG_NETSTAT" != "" ] ; then
+	pplist=$($PG_NETSTAT -nap 2>/dev/null |grep ^tcp |grep LISTEN|sort -n)
+else
+	pplist=$($PG_SS -nap 2>/dev/null |grep ^tcp |grep LISTEN|sort -n)
+fi
 pparray=()
 cnt=0
 while read pp
@@ -312,16 +317,34 @@ for i in $(seq 1 ${#pparray[@]})
 do
 	IFS=' ' read -r -a _array <<< "${pparray[$i]}"
 
-	str_ip=$(echo "${_array[3]}" | awk -F: '{print substr($0,0,length($0)-length($NF)-1)}')
-	str_port=$(echo "${_array[3]}" | awk -F: '{print $NF}')
-	if [ "${_array[0]}" == "tcp" ] && [ "$str_ip" == "0.0.0.0" ] ; then
-		str_addr="127.0.0.1:$str_port"
-	elif [ "$str_ip" == "::" ] || [ "$str_ip" == "::1" ] ; then
-		str_addr="[::1]:$str_port"
-	elif [ "${_array[0]}" == "tcp6" ] ; then
-		str_addr="[$str_ip]:$str_port"
+	if [ "$PG_NETSTAT" != "" ] ; then
+		str_ip=$(echo "${_array[3]}" | awk -F: '{print substr($0,0,length($0)-length($NF)-1)}')
+		str_port=$(echo "${_array[3]}" | awk -F: '{print $NF}')
+		if [ "${_array[0]}" == "tcp" ] && [ "$str_ip" == "0.0.0.0" ] ; then
+			str_addr="127.0.0.1:$str_port"
+		elif [ "$str_ip" == "::" ] || [ "$str_ip" == "::1" ] ; then
+			str_addr="[::1]:$str_port"
+		elif [ "${_array[0]}" == "tcp6" ] ; then
+			str_addr="[$str_ip]:$str_port"
+		else
+			str_addr="$str_ip:$str_port"
+		fi
+		str_local=${_array[3]}
+		str_pid=${_array[6]}
 	else
-		str_addr="$str_ip:$str_port"
+		str_ip=$(echo "${_array[4]}" | awk -F: '{print substr($0,0,length($0)-length($NF)-1)}')
+		str_port=$(echo "${_array[4]}" | awk -F: '{print $NF}')
+		if [ "$str_ip" == "*" ] ; then
+			str_addr="127.0.0.1:$str_port"
+		elif [ "$str_ip" == "[::]" ] ; then
+			str_addr="[::1]:$str_port"
+		else
+			str_addr="$str_ip:$str_port"
+		fi
+
+		str_local=${_array[4]}
+		str_pid=${_array[6]}
+		if [[ ${#str_pid} -gt 40 ]] ; then str_pid="${str_pid:0:38}.."; fi
 	fi
 
 	str=$($PG_TIMEOUT 1 $PG_OPENSSL s_client -connect "$str_addr" 2>/dev/null | $PG_OPENSSL x509 -dates -noout 2>/dev/null)
@@ -341,9 +364,10 @@ do
 		report_array[cnt]=$str_addr
 	fi
 
-	makeString " ${_array[3]} " "newline"
+	#makeString " ${_array[3]} " "newline"
+	makeString " $str_local " "newline"
 	makeString " $str_addr "
-	makeString " ${_array[6]} "
+	makeString " $str_pid "
 	makeString " $pstr "
 
 	if [ "$pstr" != "" ] ; then
