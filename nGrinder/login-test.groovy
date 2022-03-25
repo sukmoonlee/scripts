@@ -58,9 +58,9 @@ class TestRunner {
 		test.record(this, "test")
 		grinder.statistics.delayReports = true
 
-        // do login & save to the login info in cookies
-        NVPair[] params = [new NVPair("id", "MY_ID"), new NVPair("pw", "MY_PASSWORD")];
-        HTTPResponse res = request.POST("https://login.site.com/login/do", params);
+		// do login & save to the login info in cookies
+		NVPair[] login_params = [new NVPair("id", "MY_ID"), new NVPair("pw", "MY_PASSWORD")];
+		HTTPResponse res = request.POST("https://login.site.com/login/do", login_params);
 		cookies = CookieManager.getCookies()
 
 		grinder.logger.info("before thread.")
@@ -76,7 +76,7 @@ class TestRunner {
 
 	@Test
 	public void test() {
-        HTTPResponse response = request.GET("http://my.site.com")
+		HTTPResponse response = request.GET("http://my.site.com")
 
 		if (debug == 1) {
 			grinder.logger.info("getStatusCode = " + response.getStatusCode());
