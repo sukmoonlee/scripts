@@ -4,7 +4,7 @@ set +o posix
 ## Program Library Report Script
 ## 2019.02 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210823"
+SCRIPT_VERSION="20220327"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -262,8 +262,8 @@ function getStartCmdNo
 	if [ "$1" == "" ] ; then echo "0"; return; fi
 	_line=$(grep "] # " "$FN_INPUT" -n |grep "$1")
 	if [ "$_line" != "" ] ; then
-		IFS=':' read -r -a no <<< "$_line"
-		echo "${no[0]}"
+		IFS=':' read -r -a noa <<< "$_line"
+		echo "${noa[0]}"
 	else
 		echo "0"
 	fi
@@ -476,8 +476,7 @@ fi
 
 if [ "$FLAG_SAVE" == "0" ] && [ -f "$FN_OUTPUT" ] ; then
 	PG_rm=$(GetFullPath "rm")
-	$PG_rm -f "$FN_OUTPUT"
-	if [ "$?" != "0" ] ; then
+	if ! $PG_rm -f "$FN_OUTPUT" ; then
 		echo "[error] command not complete ($PG_rm -f $FN_OUTPUT)"
 		exit 1
 	fi

@@ -3,7 +3,7 @@
 ## ELF Library Report Script
 ## 2020.11 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210823"
+SCRIPT_VERSION="20220327"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -222,7 +222,7 @@ function GetFileCheck
 {
 	local file="$1"
 	local ftype=
-	ftype=$(file "$file" |egrep -c "ELF|Zip archive")
+	ftype=$(file "$file" |grep -Ec "ELF|Zip archive")
 	echo "$ftype"
 }
 ################################################################################

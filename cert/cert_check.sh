@@ -4,7 +4,7 @@ set +o posix
 # Certfication Check Script
 # 2020.12.26 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20211109"
+SCRIPT_VERSION="20220327"
 LC_ALL=en_US.UTF-8
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -62,7 +62,7 @@ case "$1" in
 		;;
 	*)
 		if [ "$TARGET_HOST" == "" ] && [[ $1 =~ : ]] ; then
-			ARG=(${1/:/ })
+			ARG=( "${1/:/ }" )
 			TARGET_HOST=${ARG[0]}
 			TARGET_PORT=${ARG[1]}
 			shift 1
@@ -204,9 +204,9 @@ function PrintCertInfo
 }
 function GetProtocolInfo
 {
-	str=$($PG_TIMEOUT 10 $PG_OPENSSL s_client -connect "$1" -"$2" 2>/dev/null | egrep -a "Protocol|Cipher|Session-ID:")
+	str=$($PG_TIMEOUT 10 $PG_OPENSSL s_client -connect "$1" -"$2" 2>/dev/null | grep -Ea "Protocol|Cipher|Session-ID:")
 
-	ar=($str)
+	ar=( "$str" )
 	if [ "${ar[7]}" == "" ] ; then
 		if [ "${ar[1]}" == "" ] || [ "${ar[1]}" == "(NONE)," ] ; then
 			str_protocol=" $2 "
@@ -305,7 +305,7 @@ else
 fi
 pparray=()
 cnt=0
-while read pp
+while read -r pp
 do
 	cnt=$((cnt+1))
 	pparray[cnt]=$pp

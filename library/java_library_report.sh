@@ -4,7 +4,7 @@ set +o posix
 ## Java Library Report Script
 ## 2020.11 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20210823"
+SCRIPT_VERSION="20220327"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -261,18 +261,15 @@ if [ -d "$TMPDIR" ] ; then
 	echo "Check directory($TMPDIR). Must not exist directory."
 	exit 1
 fi
-mkdir -p "$TMPDIR"
-if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR)"; exit 1; fi
+#mkdir -p "$TMPDIR"
+if ! mkdir -p "$TMPDIR" ; then echo "fail to make directory($TMPDIR)"; exit 1; fi
 
-mkdir -p "$TMPDIR/org/"
-if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR/org/)"; exit 1; fi
+if ! mkdir -p "$TMPDIR/org/" ; then echo "fail to make directory($TMPDIR/org/)"; exit 1; fi
 if [ "$NEW_FILE" != "" ] ; then
-	mkdir -p "$TMPDIR/new/"
-	if [ "$?" != "0" ] ; then echo "fail to make directory($TMPDIR/new/)"; exit 1; fi
+	if ! mkdir -p "$TMPDIR/new/" ; then echo "fail to make directory($TMPDIR/new/)"; exit 1; fi
 fi
 
-unzip "$ORG_FILE" -d "$TMPDIR/org/" &> /dev/null
-if [ "$?" != "0" ] ; then echo "unzip error $ORG_FILE ($?)"; exit 1; fi
+if ! unzip "$ORG_FILE" -d "$TMPDIR/org/" &> /dev/null ; then echo "unzip error $ORG_FILE ($?)"; exit 1; fi
 find "$TMPDIR/org/" -type f -name "*.jar" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.jar.txt"
 find "$TMPDIR/org/" -type f -name "*.class" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.class.txt"
 find "$TMPDIR/org/" -type f -name "*.jsp" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.jsp.txt"
@@ -284,8 +281,7 @@ else
 fi
 
 if [ "$NEW_FILE" != "" ] ; then
-	unzip "$NEW_FILE" -d "$TMPDIR/new/" &> /dev/null
-	if [ "$?" != "0" ] ; then echo "unzip error $NEW_FILE ($?)"; exit 1; fi
+	if ! unzip "$NEW_FILE" -d "$TMPDIR/new/" &> /dev/null ; then echo "unzip error $NEW_FILE ($?)"; exit 1; fi
 	find "$TMPDIR/new/" -type f -name "*.jar" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.jar.txt"
 	find "$TMPDIR/new/" -type f -name "*.class" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.class.txt"
 	find "$TMPDIR/new/" -type f -name "*.jsp" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.jsp.txt"
@@ -354,7 +350,7 @@ function JavaReportLibrary
 	fn_org=$1
 	fn_new=$2
 
-	while IF=" " read fn chksum
+	while IF=" " read -r fn chksum
 	do
 		len=${#ORG_BASE}
 		org_filename=${fn:$len}
@@ -430,7 +426,7 @@ function JavaReportLibrary
 	done < <(cat "$fn_org")
 
 	if [ "$NEW_FILE" == "" ] ; then return; fi
-	while IF=" " read fn chksum
+	while IF=" " read -r fn chksum
 	do
 		len=${#NEW_BASE}
 		new_filename=${fn:$len}
