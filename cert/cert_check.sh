@@ -62,7 +62,8 @@ case "$1" in
 		;;
 	*)
 		if [ "$TARGET_HOST" == "" ] && [[ $1 =~ : ]] ; then
-			ARG=( "${1/:/ }" )
+			IFS=":" read -r -a ARG <<< "$1"
+			#ARG=( ${1/:/ } )
 			TARGET_HOST=${ARG[0]}
 			TARGET_PORT=${ARG[1]}
 			shift 1
@@ -206,7 +207,8 @@ function GetProtocolInfo
 {
 	str=$($PG_TIMEOUT 10 $PG_OPENSSL s_client -connect "$1" -"$2" 2>/dev/null | grep -Ea "Protocol|Cipher|Session-ID:")
 
-	ar=( "$str" )
+	ar=( $str )
+	#mapfile -t ar <<< "$str"
 	if [ "${ar[7]}" == "" ] ; then
 		if [ "${ar[1]}" == "" ] || [ "${ar[1]}" == "(NONE)," ] ; then
 			str_protocol=" $2 "
