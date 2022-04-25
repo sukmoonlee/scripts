@@ -91,7 +91,7 @@ class TestRunner {
 			if (response.getBodyText().size()>100) {
 				grinder.logger.info("getBodyText(~100) = " + response.getBodyText().substring(0,100));
 			} else if (response.getBodyText().size()!=0) {
-				grinder.logger.info("getBodyText = " + response.getBodyText().substring(0,100));
+				grinder.logger.info("getBodyText = " + response.getBodyText());
 			}
 		}
 
