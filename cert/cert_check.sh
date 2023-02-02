@@ -4,7 +4,7 @@ set +o posix
 # Certfication Check Script
 # 2020.12.26 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20220327"
+SCRIPT_VERSION="20230202"
 LC_ALL=en_US.UTF-8
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -13,10 +13,6 @@ if [ -f "/usr/bin/openssl11" ] ; then PG_OPENSSL="/usr/bin/openssl11"
 elif [ -f "/usr/bin/openssl" ] ; then PG_OPENSSL="/usr/bin/openssl"
 elif [ -f "/usr/local/bin/openssl" ] ; then PG_OPENSSL="/usr/local/bin/openssl"
 else echo "Error - Command not found 'openssl'"; exit 1; fi
-if [ -f "/bin/timeout" ] ; then PG_TIMEOUT="/bin/timeout"
-elif [ -f "/usr/bin/timeout" ] ; then PG_TIMEOUT="/usr/bin/timeout"
-elif [ -f "/usr/share/doc/bash-3.2/scripts/timeout" ] ; then PG_TIMEOUT="bash /usr/share/doc/bash-3.2/scripts/timeout"
-else echo "Error - Command not found 'timeout'"; exit 1; fi
 if [ -f "/usr/bin/netstat" ] ; then PG_NETSTAT="/usr/bin/netstat"
 elif [ -f "/bin/netstat" ] ; then PG_NETSTAT="/bin/netstat"
 elif [ -f "/usr/sbin/ss" ] ; then PG_SS="/usr/sbin/ss"
@@ -197,7 +193,7 @@ function printString
 }
 function PrintCertInfo
 {
-	str=$($PG_TIMEOUT 10 $PG_OPENSSL s_client -connect "$1" 2>/dev/null | $PG_OPENSSL x509 -issuer -subject -dates -fingerprint -noout | sed 's/^/    /g')
+	str=$($PG_OPENSSL s_client -connect "$1" </dev/null 2>/dev/null | $PG_OPENSSL x509 -issuer -subject -dates -fingerprint -noout | sed 's/^/    /g')
 	if [ "$str" == "" ] ; then
 		exit 1
 	fi
@@ -205,7 +201,7 @@ function PrintCertInfo
 }
 function GetProtocolInfo
 {
-	str=$($PG_TIMEOUT 10 $PG_OPENSSL s_client -connect "$1" -"$2" 2>/dev/null | grep -Ea "Protocol|Cipher|Session-ID:")
+	str=$($PG_OPENSSL s_client -connect "$1" -"$2" </dev/null 2>/dev/null | grep -Ea "Protocol|Cipher|Session-ID:")
 
 	ar=( $str )
 	#mapfile -t ar <<< "$str"
@@ -349,7 +345,7 @@ do
 		if [[ ${#str_pid} -gt 40 ]] ; then str_pid="${str_pid:0:38}.."; fi
 	fi
 
-	str=$($PG_TIMEOUT 1 $PG_OPENSSL s_client -connect "$str_addr" 2>/dev/null | $PG_OPENSSL x509 -dates -noout 2>/dev/null)
+	str=$($PG_OPENSSL s_client -connect "$str_addr" </dev/null 2>/dev/null | $PG_OPENSSL x509 -dates -noout 2>/dev/null)
 	if [ "$str" == "" ] ; then
 		if [ "$FLAG_REPORT" == "1" ] ; then continue; fi
 		pstr=
@@ -373,7 +369,7 @@ do
 	makeString " $pstr "
 
 	if [ "$pstr" != "" ] ; then
-		str=$($PG_TIMEOUT 1 $PG_OPENSSL s_client -connect "$str_addr" 2>/dev/null | $PG_OPENSSL x509 -issuer -noout 2>/dev/null)
+		str=$($PG_OPENSSL s_client -connect "$str_addr" </dev/null 2>/dev/null | $PG_OPENSSL x509 -issuer -noout 2>/dev/null)
 		pstr1=${str//issuer=/ }
 		if [ "$pstr1" != "" ] ; then
 			if [ "$FLAG_ANSI" == "1" ] ; then
