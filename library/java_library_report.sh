@@ -4,7 +4,7 @@ set +o posix
 ## Java Library Report Script
 ## 2020.11 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20220327"
+SCRIPT_VERSION="20230405"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -127,16 +127,16 @@ function makeString
 	if [ "$2" == "new" ] ; then
 		_STRING_LIST=()
 		_STRING_NO=0
-		_STRING_LIST[$_STRING_NO]=""
+		_STRING_LIST[_STRING_NO]=""
 	elif [ "$2" == "newline" ] ; then
 		_STRING_NO=$((_STRING_NO+1))
-		_STRING_LIST[$_STRING_NO]=""
+		_STRING_LIST[_STRING_NO]=""
 	fi
 
 	if [ "$3" == "right" ] ; then
-		_STRING_LIST[$_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1~R|"
+		_STRING_LIST[_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1~R|"
 	else
-		_STRING_LIST[$_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1|"
+		_STRING_LIST[_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1|"
 	fi
 }
 function printString
@@ -147,7 +147,7 @@ function printString
 		local _col_cnt=0
 		for _col in "${_array[@]}"; do
 			if [ "${SLEN[$_col_cnt]}" == "" ] ; then
-				SLEN[$_col_cnt]=0
+				SLEN[_col_cnt]=0
 			fi
 			local _len=${#_col}
 			if [ "$FLAG_ANSI" == "1" ] ; then
@@ -158,7 +158,7 @@ function printString
 				_len=$((_len-2))
 			fi
 			if [ "$_len" -gt "${SLEN[$_col_cnt]}" ] ; then
-				SLEN[$_col_cnt]=$_len
+				SLEN[_col_cnt]=$_len
 			fi
 			_col_cnt=$((_col_cnt+1))
 		done
@@ -214,6 +214,22 @@ function GetFileSize
 		# shellcheck disable=SC2012
 		fsize=$(ls --full-time "$file" |awk '{print $5}')
 		echo "$fsize"
+	fi
+}
+function GetManifestDate
+{
+	local file="$1"
+	if [ ! -f "$file" ] ; then
+		echo "-"
+	else
+		local fdate
+		# shellcheck disable=SC2012
+		if [ "$(file "$file"|awk '{print $2}')" == "Zip" ] ; then
+			fdate=$(date -d "$(jar tvf "$file" |grep 'MANIFEST.MF' |awk '{print $2,$3,$4,$5,$6,$7}')" +%Y-%m-%d\ %H:%M:%S)
+		else
+			fdate=$(ls --full-time "$file" |awk '{print $6,$7}')
+		fi
+		echo "$fdate"
 	fi
 }
 function VerDiff
@@ -317,8 +333,10 @@ if [ "$NEW_FILE" != "" ] && [ -f "$NEW_BASE/META-INF/MANIFEST.MF" ] ; then
 	echo ""
 elif [ -f "$ORG_BASE/META-INF/MANIFEST.MF" ] ; then
 	echo "# Archive Manifest Information"
+	fn_date=$(GetManifestDate "$ORG_FILE")
 	makeString "-" "new"
 	makeString "$ORG_FILE" "newline"
+	makeString "(Build Date) $fn_date" "newline"
 	makeString "-" "newline"
 
 	lineno=$(wc -l "$ORG_BASE/META-INF/MANIFEST.MF" |awk '{print $1}')
@@ -334,16 +352,20 @@ elif [ -f "$ORG_BASE/META-INF/MANIFEST.MF" ] ; then
 fi
 
 echo "# Archive Library Information"
-makeString "-" "new"; makeString "-"; makeString "-"
-makeString "$ORG_FILE" "newline"
 if [ "$NEW_FILE" != "" ] ; then
+	makeString "-" "new"; makeString "-"; makeString "-"
+	makeString "$ORG_FILE" "newline"
 	makeString "$NEW_FILE"
 	makeString " Description "
+	makeString "-" "newline"; makeString "-"; makeString "-"
 else
+	makeString "-" "new"; makeString "-"; makeString "-"; makeString "-"
+	makeString "$ORG_FILE" "newline"
 	makeString " Size "
 	makeString " Checksum "
+	makeString " Date "
+	makeString "-" "newline"; makeString "-"; makeString "-"; makeString "-"
 fi
-makeString "-" "newline"; makeString "-"; makeString "-"
 
 function JavaReportLibrary
 {
@@ -358,10 +380,12 @@ function JavaReportLibrary
 
 		if [ "$NEW_FILE" == "" ] ; then
 			fn_size=$(GetFileSize "$fn")
+			fn_date=$(GetManifestDate "$fn")
 
 			makeString "$org_filename" "newline"
 			makeString "$fn_size" "" "right"
 			makeString "$chksum"
+			makeString "$fn_date"
 			continue
 		fi
 
@@ -453,6 +477,10 @@ JavaReportLibrary "$TMPDIR/org.jar.txt" "$TMPDIR/new.jar.txt"
 if [ "$FLAG_CLASS" == "1" ] ; then JavaReportLibrary "$TMPDIR/org.class.txt" "$TMPDIR/new.class.txt"; fi
 if [ "$FLAG_JSP" == "1" ] ; then JavaReportLibrary "$TMPDIR/org.jsp.txt" "$TMPDIR/new.jsp.txt"; fi
 
-makeString "-" "newline"; makeString "-"; makeString "-"
+if [ "$NEW_FILE" != "" ] ; then
+	makeString "-" "newline"; makeString "-"; makeString "-"
+else
+	makeString "-" "newline"; makeString "-"; makeString "-"; makeString "-"
+fi
 printString
 exit 0
