@@ -4,7 +4,7 @@ set +o posix
 # Certfication Check Script
 # 2020.12.26 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20230202"
+SCRIPT_VERSION="20230405"
 LC_ALL=en_US.UTF-8
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -115,16 +115,16 @@ function makeString
 	if [ "$2" == "new" ] ; then
 		_STRING_LIST=()
 		_STRING_NO=0
-		_STRING_LIST[$_STRING_NO]=""
+		_STRING_LIST[_STRING_NO]=""
 	elif [ "$2" == "newline" ] ; then
 		_STRING_NO=$((_STRING_NO+1))
-		_STRING_LIST[$_STRING_NO]=""
+		_STRING_LIST[_STRING_NO]=""
 	fi
 
 	if [ "$3" == "right" ] ; then
-		_STRING_LIST[$_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1~R|"
+		_STRING_LIST[_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1~R|"
 	else
-		_STRING_LIST[$_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1|"
+		_STRING_LIST[_STRING_NO]="${_STRING_LIST[$_STRING_NO]}$1|"
 	fi
 }
 function printString
@@ -135,7 +135,7 @@ function printString
 		local _col_cnt=0
 		for _col in "${_array[@]}"; do
 			if [ "${SLEN[$_col_cnt]}" == "" ] ; then
-				SLEN[$_col_cnt]=0
+				SLEN[_col_cnt]=0
 			fi
 			local _len=${#_col}
 			if [ "$FLAG_ANSI" == "1" ] ; then
@@ -146,7 +146,7 @@ function printString
 				_len=$((_len-2))
 			fi
 			if [ "$_len" -gt "${SLEN[$_col_cnt]}" ] ; then
-				SLEN[$_col_cnt]=$_len
+				SLEN[_col_cnt]=$_len
 			fi
 			_col_cnt=$((_col_cnt+1))
 		done
@@ -203,6 +203,7 @@ function GetProtocolInfo
 {
 	str=$($PG_OPENSSL s_client -connect "$1" -"$2" </dev/null 2>/dev/null | grep -Ea "Protocol|Cipher|Session-ID:")
 
+	# shellcheck disable=SC2206
 	ar=( $str )
 	#mapfile -t ar <<< "$str"
 	if [ "${ar[7]}" == "" ] ; then
