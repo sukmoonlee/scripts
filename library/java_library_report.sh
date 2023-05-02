@@ -4,12 +4,13 @@ set +o posix
 ## Java Library Report Script
 ## 2020.11 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20230405"
+SCRIPT_VERSION="20230502"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
 
 TMPDIR="/dev/shm/java-library-report"
+#TMPDIR="/tmp/java-library-report"
 if [ -d "$TMPDIR" ] ; then rm -rf "$TMPDIR"; fi # tmp code
 
 ORG_FILE=""
@@ -224,7 +225,7 @@ function GetManifestDate
 	else
 		local fdate
 		# shellcheck disable=SC2012
-		if [ "$(file "$file"|awk '{print $2}')" == "Zip" ] ; then
+		if [ -f "/usr/bin/file" ] && [ "$(/usr/bin/file "$file"|awk '{print $2}')" == "Zip" ] ; then
 			fdate=$(date -d "$(jar tvf "$file" |grep 'MANIFEST.MF' |awk '{print $2,$3,$4,$5,$6,$7}')" +%Y-%m-%d\ %H:%M:%S)
 		else
 			fdate=$(ls --full-time "$file" |awk '{print $6,$7}')
@@ -290,8 +291,8 @@ find "$TMPDIR/org/" -type f -name "*.jar" -exec md5sum {} \; |awk '{print $2,$1}
 find "$TMPDIR/org/" -type f -name "*.class" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.class.txt"
 find "$TMPDIR/org/" -type f -name "*.jsp" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.jsp.txt"
 # shellcheck disable=SC2012
-if [ "$(ls -1 /dev/shm/java-library-report/org |wc -l)" == "1" ] ; then
-	ORG_BASE="$TMPDIR/org/$(ls -1 /dev/shm/java-library-report/org)"
+if [ "$(ls -1 "$TMPDIR/org" |wc -l)" == "1" ] ; then
+	ORG_BASE="$TMPDIR/org/$(ls -1 "$TMPDIR/org")"
 else
 	ORG_BASE="$TMPDIR/org"
 fi
@@ -302,8 +303,8 @@ if [ "$NEW_FILE" != "" ] ; then
 	find "$TMPDIR/new/" -type f -name "*.class" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.class.txt"
 	find "$TMPDIR/new/" -type f -name "*.jsp" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.jsp.txt"
 	# shellcheck disable=SC2012
-	if [ "$(ls -1 /dev/shm/java-library-report/new |wc -l)" == "1" ] ; then
-		NEW_BASE="$TMPDIR/new/$(ls -1 /dev/shm/java-library-report/new)"
+	if [ "$(ls -1 "$TMPDIR/new" |wc -l)" == "1" ] ; then
+		NEW_BASE="$TMPDIR/new/$(ls -1 "$TMPDIR/new")"
 	else
 		NEW_BASE="$TMPDIR/new"
 	fi
