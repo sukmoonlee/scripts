@@ -4,7 +4,7 @@ set +o posix
 # Certfication Check Script
 # 2020.12.26 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20230405"
+SCRIPT_VERSION="20230616"
 LC_ALL=en_US.UTF-8
 LANG=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -22,6 +22,7 @@ function Usage
 {
 	echo "Usage: $0 [-rdvh] [{hostname/ip}:{port}]"
 	echo "      -r, --report  : print only secure socket information"
+	echo "      --dtls        : enable DTLS (default: disable)"
 	echo "      -d, --debug   : set debug(-x)"
 	echo "      -v, --version : print version ($SCRIPT_VERSION)"
 	echo "      -h, --help    : help"
@@ -30,10 +31,15 @@ TARGET_HOST=
 TARGET_PORT=
 FLAG_REPORT=0
 FLAG_ANSI=0
+FLAG_DTLS=0
 while [ "$#" -gt 0 ] ; do
 case "$1" in
 	-r|--report)
 		FLAG_REPORT=1
+		shift 1
+		;;
+	--dtls)
+		FLAG_DTLS=1
 		shift 1
 		;;
 	--ansi)
@@ -59,7 +65,6 @@ case "$1" in
 	*)
 		if [ "$TARGET_HOST" == "" ] && [[ $1 =~ : ]] ; then
 			IFS=":" read -r -a ARG <<< "$1"
-			#ARG=( ${1/:/ } )
 			TARGET_HOST=${ARG[0]}
 			TARGET_PORT=${ARG[1]}
 			shift 1
@@ -270,10 +275,10 @@ function GetTlsHostPort
 	if [[ $just == *"-ssl2"* ]] ; then
 		GetProtocolInfo "$_addr" "ssl2"
 	fi
-	if [[ $just == *"-dtls1"* ]] ; then
+	if [ "$FLAG_DTLS" == "1" ] && [[ $just == *"-dtls1"* ]] ; then
 		GetProtocolInfo "$_addr" "dtls1"
 	fi
-	if [[ $just == *"-dtls1_2"* ]] ; then
+	if [ "$FLAG_DTLS" == "1" ] && [[ $just == *"-dtls1_2"* ]] ; then
 		GetProtocolInfo "$_addr" "dtls1_2"
 	fi
 
