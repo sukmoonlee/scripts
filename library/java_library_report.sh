@@ -4,7 +4,7 @@ set +o posix
 ## Java Library Report Script
 ## 2020.11 created by smlee@sk.com
 ################################################################################
-SCRIPT_VERSION="20230502"
+SCRIPT_VERSION="20240105"
 LANG=en_US.UTF-8
 LC_ALL=en_US.UTF-8
 HOSTNAME=$(hostname)
@@ -286,7 +286,14 @@ if [ "$NEW_FILE" != "" ] ; then
 	if ! mkdir -p "$TMPDIR/new/" ; then echo "fail to make directory($TMPDIR/new/)"; exit 1; fi
 fi
 
-if ! unzip "$ORG_FILE" -d "$TMPDIR/org/" &> /dev/null ; then echo "unzip error $ORG_FILE ($?)"; exit 1; fi
+#if ! unzip "$ORG_FILE" -d "$TMPDIR/org/" &> /dev/null ; then echo "unzip error $ORG_FILE ($?)"; exit 1; fi
+unzip "$ORG_FILE" -d "$TMPDIR/org/" &> /dev/null
+exit_status=$?
+if [ "$exit_status" != "0" ] ; then
+	org_full_file=$(readlink -f "$ORG_FILE")
+	cd "$TMPDIR/org/" || exit 1
+	jar xf "$org_full_file" &> /dev/null
+fi
 find "$TMPDIR/org/" -type f -name "*.jar" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.jar.txt"
 find "$TMPDIR/org/" -type f -name "*.class" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.class.txt"
 find "$TMPDIR/org/" -type f -name "*.jsp" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/org.jsp.txt"
@@ -298,7 +305,14 @@ else
 fi
 
 if [ "$NEW_FILE" != "" ] ; then
-	if ! unzip "$NEW_FILE" -d "$TMPDIR/new/" &> /dev/null ; then echo "unzip error $NEW_FILE ($?)"; exit 1; fi
+	#if ! unzip "$NEW_FILE" -d "$TMPDIR/new/" &> /dev/null ; then echo "unzip error $NEW_FILE ($?)"; exit 1; fi
+	unzip "$NEW_FILE" -d "$TMPDIR/new/" &> /dev/null
+	exit_status=$?
+	if [ "$exit_status" != "0" ] ; then
+		new_full_file=$(readlink -f "$NEW_FILE")
+		cd "$TMPDIR/new/" || exit 1
+		jar xf "$new_full_file" &> /dev/null
+	fi
 	find "$TMPDIR/new/" -type f -name "*.jar" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.jar.txt"
 	find "$TMPDIR/new/" -type f -name "*.class" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.class.txt"
 	find "$TMPDIR/new/" -type f -name "*.jsp" -exec md5sum {} \; |awk '{print $2,$1}' | sort > "$TMPDIR/new.jsp.txt"
