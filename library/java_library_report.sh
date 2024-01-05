@@ -228,7 +228,11 @@ function GetManifestDate
 		if [ -f "/usr/bin/file" ] && [ "$(/usr/bin/file "$file"|awk '{print $2}')" == "Zip" ] ; then
 			fdate=$(date -d "$(jar tvf "$file" |grep 'MANIFEST.MF' |awk '{print $2,$3,$4,$5,$6,$7}')" +%Y-%m-%d\ %H:%M:%S)
 		else
-			fdate=$(ls --full-time "$file" |awk '{print $6,$7}')
+			if [ ! -f "/usr/bin/file" ] && [[ "$file" == *".jar" ]] ; then
+				fdate=$(date -d "$(jar tvf "$file" |grep 'MANIFEST.MF' |awk '{print $2,$3,$4,$5,$6,$7}')" +%Y-%m-%d\ %H:%M:%S)
+			else
+				fdate=$(ls --full-time "$file" |awk '{print $6,$7}')
+			fi
 		fi
 		echo "$fdate"
 	fi
